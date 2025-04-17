@@ -11,8 +11,8 @@
     :messages="table.messages"
     :page-options="table.pageOptions"
     @do-search="doSearch"
-    @is-finished="(elements: HTMLCollectionOf<Element>) => tableLoadingFinish(Array.from(elements) as HTMLElement[])"
-    @return-checked-rows="(rows: any[]) => updateCheckedRows(rows)"
+    @is-finished="tableLoadingFinish"
+    @return-checked-rows="updateCheckedRows"
   ></table-lite>
 </template>
 
@@ -158,7 +158,7 @@ export default defineComponent({
     /**
      * Table search finished event
      */
-    const tableLoadingFinish = (elements: HTMLElement[]) => {
+    const tableLoadingFinish = (elements: Array<HTMLElement>) => {
       table.isLoading = false;
       Array.prototype.forEach.call(elements, function (element: HTMLElement) {
         if (element.classList.contains("name-btn")) {
@@ -177,7 +177,7 @@ export default defineComponent({
     /**
      * Row checked event
      */
-    const updateCheckedRows = (rowsKey: any[]) => {
+    const updateCheckedRows = (rowsKey: number) => {
       console.log(rowsKey);
     };
 

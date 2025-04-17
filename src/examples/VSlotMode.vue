@@ -2,8 +2,6 @@
   <table-lite
     :is-slot-mode="true"
     :is-loading="table.isLoading"
-    :skeleton-screen="true"
-    :skeleton-rows="10"
     :columns="table.columns"
     :rows="table.rows"
     :total="table.totalRecordCount"
@@ -11,18 +9,8 @@
     @do-search="doSearch"
     @is-finished="table.isLoading = false"
   >
-    <template v-slot:vtl-header-name="data">
-      <Test>
-        {{ data.value }}
-      </Test>
-    </template>
-    <template v-slot:vtl-header-email="data">
-      <div>{{ data.value }}</div>
-    </template>
     <template v-slot:name="data">
       <Test>
-        {{ data.childIndex }}  <!-- // show the index of table  -->
-        <!-- {{ data?.index }} // only working in grouping  -->
         {{ data.value.name }}
       </Test>
     </template>

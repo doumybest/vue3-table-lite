@@ -3,125 +3,159 @@
     <div class="vtl-card-title" v-if="title">{{ title }}</div>
     <div class="vtl-card-body">
       <div class="vtl-row">
-        <div class="col-sm-12" :class="{
-          'fixed-first-column': isFixedFirstColumn,
-          'fixed-first-second-column': isFixedFirstColumn && hasCheckbox,
-        }">
-          <div v-if="isLoading">
-            <template v-if="skeletonScreen">
-              <div ref="skeletonElementRef" class="skeleton-container">
-                <!-- Header -->
-                <div class="skeleton-section skeleton-header">
-                  <div v-for="n in columns?.length" :key="'header-' + n" class="skeleton-item">
-                    <div class="item" />
-                  </div>
-                </div>
-                <!-- Body -->
-                <div v-for="(item, index) in skeletonRows" :key="item + index" class="skeleton-section skeleton-body">
-                  <div v-for="n in columns?.length" :key="'header-' + n" class="skeleton-item">
-                    <div :style="randomWidthRight(index)" class="item" />
-                  </div>
-                </div>
-              </div>
-              <!-- pagination  -->
-              <div v-if="!setting.isHidePaging" class="skeleton-footer">
-                <div style="width: 80px;" class="item" />
-                <div class="flex-item">
-                  <div style="width: 60px;" class="item" />
-                  <div style="width: 60px;" class="item" />
-                </div>
-                <div>
-                  <div class="flex-item">
-                    <div class="item" />
-                    <div class="item" />
-                    <div class="item" />
-                    <div class="item" />
-                  </div>
-                </div>
-              </div>
-            </template>
-            <div v-else class="vtl-loading-mask">
-              <div class="vtl-loading-content">
-                <div class="overlay">
-                  <div class="spinner-border"></div>
-                </div>
-              </div>
+        <div
+          class="col-sm-12"
+          :class="{
+            'fixed-first-column': isFixedFirstColumn,
+            'fixed-first-second-column': isFixedFirstColumn && hasCheckbox,
+          }"
+        >
+          <div v-if="isLoading" class="vtl-loading-mask">
+            <div class="vtl-loading-content">
+              <span style="color: white">Loading...</span>
             </div>
           </div>
-          <table v-show="!skeletonScreen || !isLoading"
+          <table
             class="vtl-table vtl-table-hover vtl-table-bordered vtl-table-responsive vtl-table-responsive-sm"
-            ref="localTable" :style="'max-height: ' + maxHeight + 'px;'">
+            ref="localTable"
+            :style="'max-height: ' + maxHeight + 'px;'"
+          >
             <thead class="vtl-thead">
               <tr class="vtl-thead-tr">
                 <th v-if="hasCheckbox" class="vtl-thead-th vtl-checkbox-th">
                   <div>
-                    <input type="checkbox" class="vtl-thead-checkbox" :indeterminate="setting.isIndeterminate"
-                      v-model="setting.isCheckAll" />
+                    <input
+                      type="checkbox"
+                      class="vtl-thead-checkbox"
+                      :indeterminate="setting.isIndeterminate"
+                      v-model="setting.isCheckAll"
+                    />
                   </div>
                 </th>
-                <th v-for="(col, index) in columns" class="vtl-thead-th" :class="col.headerClasses" :key="index" :style="Object.assign(
-                  {
-                    width: col.width ? col.width : 'auto',
-                  },
-                  col.headerStyles
-                )
-                  ">
-                  <div class="vtl-thead-column" :class="{
-                    'vtl-sortable': col.sortable,
-                    'vtl-both': col.sortable,
-                    'vtl-asc': col.sortable && setting.order === col.field && setting.sort === 'asc',
-                    'vtl-desc': col.sortable && setting.order === col.field && setting.sort === 'desc',
-                  }" @click.prevent="col.sortable ? doSort(col.field) : false">
-                    <div v-if="setting.isSlotMode && slots['vtl-header-' + col.field]">
-                      <slot :name="'vtl-header-' + col.field" :index="index" :value="col.label"></slot>
-                    </div>
-                    <div v-else v-html="col.label"></div>
-                  </div>
+                <th
+                  v-for="(col, index) in columns"
+                  class="vtl-thead-th"
+                  :class="col.headerClasses"
+                  :key="index"
+                  :style="
+                    Object.assign(
+                      {
+                        width: col.width ? col.width : 'auto',
+                      },
+                      col.headerStyles
+                    )
+                  "
+                >
+                  <div
+                    class="vtl-thead-column"
+                    :class="{
+                      'vtl-sortable': col.sortable,
+                      'vtl-both': col.sortable,
+                      'vtl-asc':
+                        setting.order === col.field && setting.sort === 'asc',
+                      'vtl-desc':
+                        setting.order === col.field && setting.sort === 'desc',
+                    }"
+                    @click.prevent="col.sortable ? doSort(col.field) : false"
+                    v-html="col.label"
+                  ></div>
                 </th>
               </tr>
             </thead>
             <template v-if="rows.length > 0">
-              <tbody v-if="isStaticMode" class="vtl-tbody"
-                :set="(templateRows = groupingKey == '' ? [localRows] : localRows)">
-                <template v-for="(rows, groupingIndex) in templateRows" :key="groupingIndex">
-                  <tr v-if="groupingKey != ''" class="vtl-tbody-tr vtl-group-tr">
-                    <td :colspan="hasCheckbox ? columns.length + 1 : columns.length" class="vtl-tbody-td vtl-group-td">
+              <tbody
+                v-if="isStaticMode"
+                class="vtl-tbody"
+                :set="
+                  (templateRows = groupingKey == '' ? [localRows] : localRows)
+                "
+              >
+                <template
+                  v-for="(rows, groupingIndex) in templateRows"
+                  :key="groupingIndex"
+                >
+                  <tr
+                    v-if="groupingKey != ''"
+                    class="vtl-tbody-tr vtl-group-tr"
+                  >
+                    <td
+                      :colspan="
+                        hasCheckbox ? columns.length + 1 : columns.length
+                      "
+                      class="vtl-tbody-td vtl-group-td"
+                    >
                       <div class="flex">
                         <div v-if="hasGroupToggle" class="animation">
-                          <a :ref="(el) => (toggleButtonRefs[groupingIndex] = el)" class="cursor-pointer"
-                            @click.prevent="toggleGroup(groupingIndex)">▼</a>
+                          <a
+                            :ref="
+                              (el) => (toggleButtonRefs[groupingIndex] = el)
+                            "
+                            class="cursor-pointer"
+                            @click.prevent="toggleGroup(groupingIndex)"
+                            >▼</a
+                          >
                         </div>
-                        <div class="ml-2" v-html="groupingDisplay
-                          ? groupingDisplay(groupingIndex)
-                          : groupingIndex
-                          "></div>
+                        <div
+                          class="ml-2"
+                          v-html="
+                            groupingDisplay
+                              ? groupingDisplay(groupingIndex)
+                              : groupingIndex
+                          "
+                        ></div>
                       </div>
                     </td>
                   </tr>
-                  <tr v-for="(row, i) in rows" :key="row[setting.keyColumn] ? row[setting.keyColumn] : i" :ref="(el) => {
-                    if (!groupingRowsRefs[groupingIndex]) {
-                      groupingRowsRefs[groupingIndex] = [];
-                    }
-                    groupingRowsRefs[groupingIndex][i] = el;
-                  }
-                    " :name="'vtl-group-' + groupingIndex" class="vtl-tbody-tr" :class="typeof rowClasses === 'function' ? rowClasses(row) : rowClasses
-                      " @mouseenter="addHoverClassToTr" @mouseleave="removeHoverClassFromTr"
-                    @click="$emit('row-clicked', row)">
+                  <tr
+                    v-for="(row, i) in rows"
+                    :key="row[setting.keyColumn] ? row[setting.keyColumn] : i"
+                    :ref="
+                      (el) => {
+                        if (!groupingRowsRefs[groupingIndex]) {
+                          groupingRowsRefs[groupingIndex] = [];
+                        }
+                        groupingRowsRefs[groupingIndex][i] = el;
+                      }
+                    "
+                    :name="'vtl-group-' + groupingIndex"
+                    class="vtl-tbody-tr"
+                    :class="
+                      typeof rowClasses === 'function'
+                        ? rowClasses(row)
+                        : rowClasses
+                    "
+                    @mouseenter="addHoverClassToTr"
+                    @mouseleave="removeHoverClassFromTr"
+                    @click="$emit('row-clicked', row)"
+                  >
                     <td v-if="hasCheckbox" class="vtl-tbody-td vtl-checkbox-td">
                       <div>
-                        <input type="checkbox" class="vtl-tbody-checkbox" :ref="(el) => {
-                          rowCheckbox.push(el);
-                        }
-                          " :value="row[setting.keyColumn]" @click="checked(row, $event)" />
+                        <input
+                          type="checkbox"
+                          class="vtl-tbody-checkbox"
+                          :ref="
+                            (el) => {
+                              rowCheckbox.push(el);
+                            }
+                          "
+                          :value="row[setting.keyColumn]"
+                          @click="checked(row, $event)"
+                        />
                       </div>
                     </td>
-                    <td v-for="(col, j) in columns" :key="j" class="vtl-tbody-td"
-                      :class="['vtl-tbody-td' + j].concat(col.columnClasses)" :style="col.columnStyles"
-                      @mouseover="addVerticalHighlight(j)" @mouseleave="removeVerticalHighlight(j)">
+                    <td
+                      v-for="(col, j) in columns"
+                      :key="j"
+                      class="vtl-tbody-td"
+                      :class="['vtl-tbody-td' + j].concat(col.columnClasses)"
+                      :style="col.columnStyles"
+                      @mouseover="addVerticalHighlight(j)"
+                      @mouseleave="removeVerticalHighlight(j)"
+                    >
                       <div v-if="col.display" v-html="col.display(row)"></div>
                       <div v-else>
                         <div v-if="setting.isSlotMode && slots[col.field]">
-                          <slot :name="col.field" :index="i" :value="row"></slot>
+                          <slot :name="col.field" :value="row"></slot>
                         </div>
                         <span v-else>{{ row[col.field] }}</span>
                       </div>
@@ -129,47 +163,98 @@
                   </tr>
                 </template>
               </tbody>
-              <tbody v-else :set="(templateRows = groupingKey == '' ? [rows] : groupingRows)">
-                <template v-for="(rows, groupingIndex, index) in templateRows" :key="groupingIndex">
-                  <tr v-if="groupingKey != ''" class="vtl-tbody-tr vtl-group-tr">
-                    <td :colspan="hasCheckbox ? columns.length + 1 : columns.length" class="vtl-tbody-td vtl-group-td">
+              <tbody
+                v-else
+                :set="
+                  (templateRows = groupingKey == '' ? [rows] : groupingRows)
+                "
+              >
+                <template
+                  v-for="(rows, groupingIndex) in templateRows"
+                  :key="groupingIndex"
+                >
+                  <tr
+                    v-if="groupingKey != ''"
+                    class="vtl-tbody-tr vtl-group-tr"
+                  >
+                    <td
+                      :colspan="
+                        hasCheckbox ? columns.length + 1 : columns.length
+                      "
+                      class="vtl-tbody-td vtl-group-td"
+                    >
                       <div class="flex">
                         <div v-if="hasGroupToggle" class="animation">
-                          <a :ref="(el) => (toggleButtonRefs[groupingIndex] = el)" class="cursor-pointer"
-                            @click.prevent="toggleGroup(groupingIndex)">▼</a>
+                          <a
+                            :ref="
+                              (el) => (toggleButtonRefs[groupingIndex] = el)
+                            "
+                            class="cursor-pointer"
+                            @click.prevent="toggleGroup(groupingIndex)"
+                            >▼</a
+                          >
                         </div>
-                        <div class="ml-2" v-html="groupingDisplay
-                          ? groupingDisplay(groupingIndex)
-                          : groupingIndex
-                          "></div>
+                        <div
+                          class="ml-2"
+                          v-html="
+                            groupingDisplay
+                              ? groupingDisplay(groupingIndex)
+                              : groupingIndex
+                          "
+                        ></div>
                       </div>
                     </td>
                   </tr>
-                  <tr v-for="(row, i) in rows" :ref="(el) => {
-                    if (!groupingRowsRefs[groupingIndex]) {
-                      groupingRowsRefs[groupingIndex] = [];
-                    }
-                    groupingRowsRefs[groupingIndex][i] = el;
-                  }
-                    " :name="'vtl-group-' + groupingIndex" :key="row[setting.keyColumn] ? row[setting.keyColumn] : i"
-                    class="vtl-tbody-tr" :class="typeof rowClasses === 'function' ? rowClasses(row) : rowClasses
-                      " @mouseenter="addHoverClassToTr" @mouseleave="removeHoverClassFromTr"
-                    @click="$emit('row-clicked', row)">
+                  <tr
+                    v-for="(row, i) in rows"
+                    :ref="
+                      (el) => {
+                        if (!groupingRowsRefs[groupingIndex]) {
+                          groupingRowsRefs[groupingIndex] = [];
+                        }
+                        groupingRowsRefs[groupingIndex][i] = el;
+                      }
+                    "
+                    :name="'vtl-group-' + groupingIndex"
+                    :key="row[setting.keyColumn] ? row[setting.keyColumn] : i"
+                    class="vtl-tbody-tr"
+                    :class="
+                      typeof rowClasses === 'function'
+                        ? rowClasses(row)
+                        : rowClasses
+                    "
+                    @mouseenter="addHoverClassToTr"
+                    @mouseleave="removeHoverClassFromTr"
+                    @click="$emit('row-clicked', row)"
+                  >
                     <td v-if="hasCheckbox" class="vtl-tbody-td vtl-checkbox-td">
                       <div>
-                        <input type="checkbox" class="vtl-tbody-checkbox" :ref="(el) => {
-                          rowCheckbox.push(el);
-                        }
-                          " :value="row[setting.keyColumn]" @click="checked(row, $event)" />
+                        <input
+                          type="checkbox"
+                          class="vtl-tbody-checkbox"
+                          :ref="
+                            (el) => {
+                              rowCheckbox.push(el);
+                            }
+                          "
+                          :value="row[setting.keyColumn]"
+                          @click="checked(row, $event)"
+                        />
                       </div>
                     </td>
-                    <td v-for="(col, j) in columns" :key="j" class="vtl-tbody-td"
-                      :class="['vtl-tbody-td' + j].concat(col.columnClasses)" :style="col.columnStyles"
-                      @mouseover="addVerticalHighlight(j)" @mouseleave="removeVerticalHighlight(j)">
+                    <td
+                      v-for="(col, j) in columns"
+                      :key="j"
+                      class="vtl-tbody-td"
+                      :class="['vtl-tbody-td' + j].concat(col.columnClasses)"
+                      :style="col.columnStyles"
+                      @mouseover="addVerticalHighlight(j)"
+                      @mouseleave="removeVerticalHighlight(j)"
+                    >
                       <div v-if="col.display" v-html="col.display(row)"></div>
                       <div v-else>
                         <div v-if="setting.isSlotMode && slots[col.field]">
-                          <slot :name="col.field" :index="index" :childIndex="i" :value="row"></slot>
+                          <slot :name="col.field" :value="row"></slot>
                         </div>
                         <span v-else>{{ row[col.field] }}</span>
                       </div>
@@ -181,25 +266,45 @@
           </table>
         </div>
       </div>
-      <div class="vtl-paging vtl-row" v-if="(!skeletonScreen || !isLoading) && rows.length > 0">
+      <div class="vtl-paging vtl-row" v-if="rows.length > 0">
         <template v-if="!setting.isHidePaging">
           <div class="vtl-paging-info col-sm-12 col-md-4">
             <div role="status" aria-live="polite">
               {{
-                stringFormat(messages.pagingInfo, setting.offset, setting.limit, total)
+                stringFormat(
+                  messages.pagingInfo,
+                  setting.offset,
+                  setting.limit,
+                  total
+                )
               }}
             </div>
           </div>
           <div class="vtl-paging-change-div col-sm-12 col-md-4">
-            <span class="vtl-paging-count-label">{{ messages.pageSizeChangeLabel }}</span>
-            <select class="vtl-paging-count-dropdown" v-model="setting.pageSize">
-              <option v-for="pageOption in pageOptions" :value="pageOption.value" :key="pageOption.value">
+            <span class="vtl-paging-count-label">{{
+              messages.pageSizeChangeLabel
+            }}</span>
+            <select
+              class="vtl-paging-count-dropdown"
+              v-model="setting.pageSize"
+            >
+              <option
+                v-for="pageOption in pageOptions"
+                :value="pageOption.value"
+                :key="pageOption.value"
+              >
                 {{ pageOption.text }}
               </option>
             </select>
-            <span class="vtl-paging-page-label">{{ messages.gotoPageLabel }}</span>
+            <span class="vtl-paging-page-label">{{
+              messages.gotoPageLabel
+            }}</span>
             <select class="vtl-paging-page-dropdown" v-model="setting.page">
-              <option v-for="n in setting.maxPage" :key="n" :value="parseInt(n)">
+              <option
+                v-for="n in setting.maxPage"
+                :key="n"
+                :value="parseInt(n)"
+              >
                 {{ n }}
               </option>
             </select>
@@ -207,39 +312,66 @@
           <div class="vtl-paging-pagination-div col-sm-12 col-md-4">
             <div class="dataTables_paginate">
               <ul class="vtl-paging-pagination-ul vtl-pagination">
-                <li class="vtl-paging-pagination-page-li vtl-paging-pagination-page-li-first page-item"
-                  :class="{ disabled: setting.page <= 1 }">
-                  <a class="vtl-paging-pagination-page-link vtl-paging-pagination-page-link-first page-link cursor-pointer"
-                    aria-label="Previous" @click.prevent="setting.page = 1">
+                <li
+                  class="vtl-paging-pagination-page-li vtl-paging-pagination-page-li-first page-item"
+                  :class="{ disabled: setting.page <= 1 }"
+                >
+                  <a
+                    class="vtl-paging-pagination-page-link vtl-paging-pagination-page-link-first page-link cursor-pointer"
+                    aria-label="Previous"
+                    @click.prevent="setting.page = 1"
+                  >
                     <span aria-hidden="true">&laquo;</span>
                     <span class="sr-only">First</span>
                   </a>
                 </li>
-                <li class="vtl-paging-pagination-page-li vtl-paging-pagination-page-li-prev page-item"
-                  :class="{ disabled: setting.page <= 1 }">
-                  <a class="vtl-paging-pagination-page-link vtl-paging-pagination-page-link-prev page-link cursor-pointer"
-                    aria-label="Previous" @click.prevent="prevPage">
+                <li
+                  class="vtl-paging-pagination-page-li vtl-paging-pagination-page-li-prev page-item"
+                  :class="{ disabled: setting.page <= 1 }"
+                >
+                  <a
+                    class="vtl-paging-pagination-page-link vtl-paging-pagination-page-link-prev page-link cursor-pointer"
+                    aria-label="Previous"
+                    @click.prevent="prevPage"
+                  >
                     <span aria-hidden="true">&lt;</span>
                     <span class="sr-only">Prev</span>
                   </a>
                 </li>
-                <li class="vtl-paging-pagination-page-li vtl-paging-pagination-page-li-number page-item"
-                  v-for="n in setting.paging" :key="n" :class="{ disabled: setting.page === n }">
-                  <a class="vtl-paging-pagination-page-link vtl-paging-pagination-page-link-number page-link cursor-pointer"
-                    @click.prevent="movePage(n)">{{ n }}</a>
+                <li
+                  class="vtl-paging-pagination-page-li vtl-paging-pagination-page-li-number page-item"
+                  v-for="n in setting.paging"
+                  :key="n"
+                  :class="{ disabled: setting.page === n }"
+                >
+                  <a
+                    class="vtl-paging-pagination-page-link vtl-paging-pagination-page-link-number page-link cursor-pointer"
+                    @click.prevent="movePage(n)"
+                    >{{ n }}</a
+                  >
                 </li>
-                <li class="vtl-paging-pagination-page-li vtl-paging-pagination-page-li-next page-item"
-                  :class="{ disabled: setting.page >= setting.maxPage }">
-                  <a class="vtl-paging-pagination-page-link vtl-paging-pagination-page-link-next page-link cursor-pointer"
-                    aria-label="Next" @click.prevent="nextPage">
+                <li
+                  class="vtl-paging-pagination-page-li vtl-paging-pagination-page-li-next page-item"
+                  :class="{ disabled: setting.page >= setting.maxPage }"
+                >
+                  <a
+                    class="vtl-paging-pagination-page-link vtl-paging-pagination-page-link-next page-link cursor-pointer"
+                    aria-label="Next"
+                    @click.prevent="nextPage"
+                  >
                     <span aria-hidden="true">&gt;</span>
                     <span class="sr-only">Next</span>
                   </a>
                 </li>
-                <li class="vtl-paging-pagination-page-li vtl-paging-pagination-page-li-last page-item"
-                  :class="{ disabled: setting.page >= setting.maxPage }">
-                  <a class="vtl-paging-pagination-page-link vtl-paging-pagination-page-link-last page-link cursor-pointer"
-                    aria-label="Next" @click.prevent="setting.page = setting.maxPage">
+                <li
+                  class="vtl-paging-pagination-page-li vtl-paging-pagination-page-li-last page-item"
+                  :class="{ disabled: setting.page >= setting.maxPage }"
+                >
+                  <a
+                    class="vtl-paging-pagination-page-link vtl-paging-pagination-page-link-last page-link cursor-pointer"
+                    aria-label="Next"
+                    @click.prevent="setting.page = setting.maxPage"
+                  >
                     <span aria-hidden="true">&raquo;</span>
                     <span class="sr-only">Last</span>
                   </a>
@@ -249,8 +381,7 @@
           </div>
         </template>
       </div>
-      <!-- <div class="vtl-row" v-else> -->
-      <div class="vtl-row" v-else-if="!isLoading && rows.length == 0">
+      <div class="vtl-row" v-else>
         <div class="vtl-empty-msg col-sm-12 text-center">
           {{ messages.noDataAvailable }}
         </div>
@@ -258,6 +389,7 @@
     </div>
   </div>
 </template>
+
 <script>
 import {
   defineComponent,
@@ -269,6 +401,7 @@ import {
   nextTick,
   onMounted,
 } from "vue";
+
 export default defineComponent({
   name: "my-table",
   emits: [
@@ -435,17 +568,10 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
-    skeletonScreen: {
-      type: Boolean,
-      default: false,
-    },
-    skeletonRows: {
-      type: Number,
-      default: 5,
-    }
   },
   setup(props, { emit, slots }) {
     let localTable = ref(null);
+
     // 檢查下拉選單中是否包含預設一頁顯示筆數 (Validate dropdown's values have page-size value or not)
     let defaultPageSize =
       props.pageOptions.length > 0
@@ -462,6 +588,7 @@ export default defineComponent({
         }
       });
     }
+
     // 組件用內部設定值 (Internal set value for components)
     const setting = reactive({
       // 是否啟用Slot模式 (Enable slot mode)
@@ -528,8 +655,10 @@ export default defineComponent({
       pageOptions: props.pageOptions,
       isVerticalHighlight: props.isVerticalHighlight,
     });
+
     // 已選擇中的資料 (Checked rows)
     const isChecked = ref([]);
+
     // 組件內用資料 (Data rows for local)
     const localRows = computed(() => {
       let rows = props.rows;
@@ -542,6 +671,7 @@ export default defineComponent({
       rows.sort(function (a, b) {
         return collator.compare(a[setting.order], b[setting.order]) * sortOrder;
       });
+
       let result = null;
       if (props.groupingKey) {
         // If have set grouping-key create group temp data
@@ -552,9 +682,11 @@ export default defineComponent({
           }
           tmp[v[props.groupingKey]].push(v);
         });
+
         result = {};
         for (let index = setting.offset - 1; index < setting.limit; index++) {
-          result[rows[index][props.groupingKey]] = tmp[rows[index][props.groupingKey]];
+          result[rows[index][props.groupingKey]] =
+            tmp[rows[index][props.groupingKey]];
         }
       } else {
         result = [];
@@ -562,19 +694,24 @@ export default defineComponent({
           result.push(rows[index]);
         }
       }
+
       nextTick(function () {
         // 資料完成渲染後回傳私有元件
         callIsFinished();
       });
+
       return result;
     });
+
     ////////////////////////////
     //
     //  Checkbox 相關操作
     //  (Checkbox related operations)
     //
+
     // 定義Checkbox參照 (Define Checkbox reference)
     const rowCheckbox = ref([]);
+
     /**
      * 重新渲染前執行 (Execute before re-rendering)
      */
@@ -582,6 +719,7 @@ export default defineComponent({
       // 每次更新前都把值全部清空 (Clear all values before each update)
       rowCheckbox.value = [];
     });
+
     /**
      * 監聽全勾選Checkbox (Check all checkboxes for monitoring)
      */
@@ -592,7 +730,9 @@ export default defineComponent({
           setting.isIndeterminate = false;
           isChecked.value = [];
           if (state) {
-            let tmpRows = (props.isStaticMode) ? props.rows.slice((setting.offset - 1), setting.limit) : props.rows;
+            let tmpRows = props.isStaticMode
+              ? props.rows.slice(setting.offset - 1, setting.limit)
+              : props.rows;
             if (props.checkedReturnType == "row") {
               isChecked.value = tmpRows;
             } else {
@@ -611,6 +751,7 @@ export default defineComponent({
         }
       }
     );
+
     /**
      * 監控有無顯示Checkbox變化 (hasCeckbox props for monitoring)
      */
@@ -622,6 +763,7 @@ export default defineComponent({
         }
       }
     );
+
     /**
      * Checkbox點擊事件 (Checkbox click event)
      */
@@ -653,6 +795,7 @@ export default defineComponent({
         emit("return-checked-rows", isChecked.value);
       }
     };
+
     /**
      * 清空畫面上所有選擇資料 (Clear all selected data on the screen)
      */
@@ -666,11 +809,13 @@ export default defineComponent({
       // 回傳畫面上選上的資料 (Return the selected data on the screen)
       emit("return-checked-rows", isChecked.value);
     };
+
     ////////////////////////////
     //
     //  排序·換頁等 相關操作
     //  (Sorting, page change, etc. related operations)
     //
+
     /**
      * 呼叫執行排序 (Call execution sequencing)
      */
@@ -687,6 +832,7 @@ export default defineComponent({
       setting.order = order;
       setting.sort = sort;
       emit("do-search", offset, limit, order, sort);
+
       // 清空畫面上選擇的資料 (Clear the selected data on the screen)
       if (setting.isCheckAll) {
         // 取消全選時自然會清空 (It will be cleared when you cancel all selections)
@@ -697,6 +843,7 @@ export default defineComponent({
         }
       }
     };
+
     /**
      * 切換頁碼 (Switch page number)
      *
@@ -735,6 +882,7 @@ export default defineComponent({
         }
       }
     );
+
     /**
      * 切換顯示筆數 (Switch display number)
      */
@@ -758,6 +906,7 @@ export default defineComponent({
         setting.pageSize = newPageSize;
       }
     );
+
     /**
      * 上一頁 (Previous page)
      */
@@ -768,12 +917,14 @@ export default defineComponent({
       }
       setting.page--;
     };
+
     /**
      * 移動至指定頁數 (Move to the specified number of pages)
      */
     const movePage = (page) => {
       setting.page = page;
     };
+
     /**
      * 下一頁 (Next page)
      */
@@ -784,6 +935,7 @@ export default defineComponent({
       }
       setting.page++;
     };
+
     // 監聽資料變更 (Monitoring data changes)
     watch(
       () => props.rows,
@@ -800,25 +952,30 @@ export default defineComponent({
       },
       { deep: true }
     );
+
     const stringFormat = (template, ...args) => {
       return template.replace(/{(\d+)}/g, function (match, number) {
         return typeof args[number] != "undefined" ? args[number] : match;
       });
     };
+
     // Call 「is-finished」 Method
     const callIsFinished = () => {
       if (localTable.value) {
-        let localElement = localTable.value.getElementsByClassName("is-rows-el");
+        let localElement =
+          localTable.value.getElementsByClassName("is-rows-el");
         emit("is-finished", localElement);
       }
       emit("get-now-page", setting.page);
     };
+
     // Toggle button elements
     const toggleButtonRefs = ref({});
     // Grouping rows
     const groupingRowsRefs = ref({});
     // Saved toggle status
     const groupingToggleStatus = ref({});
+
     // Data rows for grouping (Default-mode only)
     const groupingRows = computed(() => {
       let result = {};
@@ -828,9 +985,12 @@ export default defineComponent({
         }
         result[v[props.groupingKey]].push(v);
       });
+
       nextTick(function () {
         if (props.startCollapsed || props.isKeepCollapsed) {
-          for (const [groupIndex, el] of Object.entries(toggleButtonRefs.value)) {
+          for (const [groupIndex, el] of Object.entries(
+            toggleButtonRefs.value
+          )) {
             if (el) {
               let isOpen = !props.startCollapsed;
               if (
@@ -857,8 +1017,10 @@ export default defineComponent({
         }
         callIsFinished();
       });
+
       return result;
     });
+
     /**
      * Toggle Group rows
      *
@@ -882,6 +1044,7 @@ export default defineComponent({
         emit("row-toggled", groupingRows.value[groupIndex], isClose);
       }
     };
+
     /**
      * Add hover class to tr
      *
@@ -890,6 +1053,7 @@ export default defineComponent({
     const addHoverClassToTr = (mouseEvent) => {
       mouseEvent.target.classList.add("hover");
     };
+
     /**
      * Remove hover class from tr
      *
@@ -898,10 +1062,11 @@ export default defineComponent({
     const removeHoverClassFromTr = (mouseEvent) => {
       mouseEvent.target.classList.remove("hover");
     };
+
     /**
      * Add hover class to td
-     * 
-     * @param {Number} index 
+     *
+     * @param {Number} index
      */
     const addVerticalHighlight = (index) => {
       if (!setting.isVerticalHighlight) {
@@ -912,10 +1077,11 @@ export default defineComponent({
         elements[i].classList.add("hover");
       }
     };
+
     /**
      * Remove hover class from td
      *
-     * @param {Number} index 
+     * @param {Number} index
      */
     const removeVerticalHighlight = (index) => {
       if (!setting.isVerticalHighlight) {
@@ -926,6 +1092,7 @@ export default defineComponent({
         elements[i].classList.remove("hover");
       }
     };
+
     /**
      * 組件掛載後事件 (Mounted Event)
      */
@@ -936,22 +1103,8 @@ export default defineComponent({
         }
       });
     });
-    const skeletonElementRef = ref(null);
-    const randomWidthRight = (index) => {
-      // Ensure tableWidth is dynamically fetched from the ref
-      const tableWidths = skeletonElementRef.value?.clientWidth || 1100; // Fallback to 1100px if the element is not yet mounted
-      const tableWidth = tableWidths < 500 ? 1200 : tableWidths;
-      const columnWidth = tableWidth / props.columns?.length; // Calculate width per column
-      const randomWidth = Math.floor(columnWidth * 0.6 + ((index * 31) % (columnWidth * 0.4))); // 50% to 95% of column width
-      return {
-        width: `${randomWidth}px`,
-      };
-    };
+
     return {
-      // skeleton start
-      skeletonElementRef,
-      randomWidthRight,
-      // skeleton end
       slots,
       localTable,
       localRows,
@@ -976,12 +1129,12 @@ export default defineComponent({
   },
 });
 </script>
+
 <style scoped>
 .vtl-checkbox-th {
   width: 1%;
   min-width: 38px;
 }
-
 .vtl-checkbox-td {
   width: 1%;
   min-width: 38px;
@@ -1016,8 +1169,6 @@ export default defineComponent({
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   flex-flow: column;
-  align-items: center;
-  justify-content: center;
   transition: opacity 0.3s ease;
 }
 
@@ -1104,7 +1255,7 @@ tr {
   -webkit-overflow-scrolling: touch;
 }
 
-.vtl-table-responsive>.vtl-table-bordered {
+.vtl-table-responsive > .vtl-table-bordered {
   border: 0;
 }
 
@@ -1186,11 +1337,9 @@ tr {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
-
-  .vtl-table-responsive-sm>.table-bordered {
+  .vtl-table-responsive-sm > .table-bordered {
     border: 0;
   }
-
   .col-md-4 {
     -ms-flex: 0 0 33.333333%;
     flex: 0 0 33.333333%;
@@ -1203,7 +1352,6 @@ tr {
   top: 0;
   z-index: 1;
 }
-
 .vtl-table tbody th {
   position: sticky;
   left: 0;
@@ -1213,13 +1361,11 @@ tr {
 .fixed-first-column {
   overflow-x: auto;
 }
-
 .fixed-first-column tr th:first-child {
   position: sticky;
   left: 0;
   z-index: 2;
 }
-
 .fixed-first-column tr td:first-child {
   position: sticky;
   left: 0;
@@ -1235,7 +1381,6 @@ tr {
   width: 102%;
   height: 102%;
 }
-
 .fixed-first-column tr .vtl-checkbox-th:first-child::before {
   content: "";
   position: absolute;
@@ -1245,7 +1390,6 @@ tr {
   width: 103%;
   height: 102%;
 }
-
 .fixed-first-column tr td:first-child::before,
 .fixed-first-column tr td:nth-child(2)::before {
   content: "";
@@ -1256,7 +1400,6 @@ tr {
   width: 102%;
   height: 102%;
 }
-
 .fixed-first-column tr .vtl-checkbox-td:first-child::before {
   content: "";
   position: absolute;
@@ -1290,168 +1433,23 @@ tr {
 .flex {
   display: flex;
 }
-
 .animation {
   transform: rotate(0deg);
   transition: transform 0.3s;
 }
-
 .cursor-pointer {
   cursor: pointer;
 }
-
 .rotated-90 {
   transform: rotate(-90deg);
 }
-
 .hidden {
   display: none;
 }
-
 .ml-2 {
   margin-left: 0.5rem;
 }
-
 .vtl-tbody-td.hover {
   background-color: #ececec;
 }
-
-.spinner-border {
-  display: inline-block;
-  border: 0.25em solid currentcolor;
-  border-right-color: transparent;
-  color: #ffffffbf;
-  width: 4rem;
-  height: 4rem;
-  vertical-align: -0.125em;
-  border-radius: 50%;
-  animation: .75s linear infinite spinner-border;
-  -webkit-animation: .75s linear infinite spinner-border;
-}
-
-@keyframes spinner-border {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@-webkit-keyframes spinner-border {
-  from {
-    -webkit-transform: rotate(0deg);
-  }
-
-  to {
-    -webkit-transform: rotate(360deg);
-  }
-}
-
-/* skeleton loading  start from here  */
-.flex-item {
-  display: flex;
-  gap: 5px;
-}
-
-.skeleton-container {
-  border: 1px solid #f3f4f6;
-  /* border-radius: 10px; */
-  /* overflow: hidden; */
-  width: 100%;
-}
-
-/* Skeleton sections */
-.skeleton-section {
-  display: grid;
-  /* overflow-x: auto; */
-  overflow: hidden;
-}
-
-.skeleton-header {
-  grid-template-columns: repeat(auto-fit, minmax(3rem, 1fr));
-  background-color: rgb(243, 246, 248);
-  padding-top: 4px;
-  padding-bottom: 4px;
-}
-
-.skeleton-body {
-  grid-template-columns: repeat(auto-fit, minmax(3rem, 1fr));
-}
-
-.skeleton-footer {
-  margin-top: 10px;
-  margin-bottom: 5px;
-  padding-left: 8px;
-  padding-right: 8px;
-  display: flex;
-  justify-content: space-between;
-}
-
-.skeleton-footer .item {
-  background-color: rgb(229 231 235);
-  border-radius: 5px;
-  height: 30px;
-  min-width: 30px;
-  animation: skeleton-pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-/* Skeleton items */
-.skeleton-item {
-  height: 2.5rem;
-  overflow: hidden;
-  padding-top: 8px;
-  padding-bottom: 8px;
-  padding-left: 8px;
-  padding-right: 8px;
-  /* background-color: white; */
-  border-bottom: 1px solid rgb(243 244 246);
-  animation: skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-.skeleton-body:last-child .skeleton-item {
-  border-bottom: 0;
-}
-
-.skeleton-item .item {
-  background-color: rgb(229 231 235);
-  border-radius: 5px;
-  height: 100%;
-}
-
-/* Skeleton animation */
-@keyframes skeleton-pulse {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.5;
-  }
-}
-
-/* Responsive breakpoints */
-@media (max-width: 1024px) {
-  .skeleton-section {
-    /* grid-template-columns: repeat(5, 1fr); */
-    grid-template-columns: repeat(8, minmax(12rem, 1fr));
-  }
-}
-
-@media (max-width: 640px) {
-  .skeleton-section {
-    grid-template-columns: repeat(8, minmax(12rem, 1fr));
-  }
-}
-
-@media (max-width: 480px) {
-  .skeleton-section {
-    grid-template-columns: repeat(8, minmax(12rem, 1fr));
-  }
-}
-
-/* skeleton loading ending here  */
 </style>

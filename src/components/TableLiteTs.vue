@@ -1,267 +1,9 @@
-<template>
-  <!-- eslint-disable @typescript-eslint/no-explicit-any -->
-  <div class="vtl vtl-card">
-    <div class="vtl-card-title" v-if="title">{{ title }}</div>
-    <div class="vtl-card-body">
-      <div class="vtl-row">
-        <div class="col-sm-12" :class="{
-          'fixed-first-column': isFixedFirstColumn,
-          'fixed-first-second-column': isFixedFirstColumn && hasCheckbox,
-        }">
-          <div v-if="isLoading">
-            <template v-if="skeletonScreen">
-              <div ref="skeletonElementRef" class="skeleton-container">
-                <!-- Header -->
-                <div class="skeleton-section skeleton-header">
-                  <div v-for="n in columns?.length" :key="'header-' + n" class="skeleton-item">
-                    <div class="item" />
-                  </div>
-                </div>
-                <!-- Body -->
-                <div v-for="(item, index) in skeletonRows" :key="item + index" class="skeleton-section skeleton-body">
-                  <div v-for="n in columns?.length" :key="'header-' + n" class="skeleton-item">
-                    <div :style="randomWidthRight(index)" class="item" />
-                  </div>
-                </div>
-              </div>
-              <!-- pagination  -->
-              <div v-if="!setting.isHidePaging" class="skeleton-footer">
-                <div style="width: 80px;" class="item" />
-                <div class="flex-item">
-                  <div style="width: 60px;" class="item" />
-                  <div style="width: 60px;" class="item" />
-                </div>
-                <div>
-                  <div class="flex-item">
-                    <div class="item" />
-                    <div class="item" />
-                    <div class="item" />
-                    <div class="item" />
-                  </div>
-                </div>
-              </div>
-            </template>
-            <div v-else class="vtl-loading-mask">
-              <div class="vtl-oading-content">
-                <div class="overlay">
-                  <div class="spinner-border"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <table v-show="!isLoading"
-            class="vtl-table vtl-table-hover vtl-table-bordered vtl-table-responsive vtl-table-responsive-sm"
-            ref="localTable" :style="'max-height: ' + maxHeight + 'px;'">
-            <thead class="vtl-thead">
-              <tr class="vtl-thead-tr">
-                <th v-if="hasCheckbox" class="vtl-thead-th vtl-checkbox-th">
-                  <div>
-                    <input type="checkbox" class="vtl-thead-checkbox" :indeterminate="setting.isIndeterminate"
-                      v-model="setting.isCheckAll" />
-                  </div>
-                </th>
-                <th v-for="(col, index) in (columns as Array<any>)" class="vtl-thead-th" :class="col.headerClasses"
-                  :key="index" :style="Object.assign(
-                    {
-                      width: col.width ? col.width : 'auto',
-                    },
-                    col.headerStyles
-                  )
-                    ">
-                  <div class="vtl-thead-column" :class="{
-                    'vtl-sortable': col.sortable,
-                    'vtl-both': col.sortable,
-                    'vtl-asc': col.sortable && setting.order === col.field && setting.sort === 'asc',
-                    'vtl-desc': col.sortable && setting.order === col.field && setting.sort === 'desc',
-                  }" @click.prevent="col.sortable ? doSort(col.field) : false">
-                    <div v-if="setting.isSlotMode && slots['vtl-header-' + col.field]">
-                      <slot :name="'vtl-header-' + col.field" :index="index" :value="col.label"></slot>
-                    </div>
-                    <div v-else v-html="col.label"></div>
-                  </div>
-                </th>
-              </tr>
-            </thead>
-            <template v-if="rows.length > 0">
-              <tbody v-if="isStaticMode" class="vtl-tbody"
-                :set="(templateRows = groupingKey == '' ? [localRows] : localRows)">
-                <template v-for="(rows, groupingIndex) in templateRows" :key="groupingIndex">
-                  <tr v-if="groupingKey != ''" class="vtl-tbody-tr vtl-group-tr">
-                    <td :colspan="hasCheckbox ? columns.length + 1 : columns.length" class="vtl-tbody-td vtl-group-td">
-                      <div class="flex">
-                        <div v-if="hasGroupToggle" class="animation">
-                          <a :ref="(el: any) => (toggleButtonRefs[groupingIndex] as any) = el" class="cursor-pointer"
-                            @click.prevent="toggleGroup(groupingIndex.toString())">▼</a>
-                        </div>
-                        <div class="ml-2" v-html="groupingDisplay
-                          ? groupingDisplay(groupingIndex)
-                          : groupingIndex
-                          "></div>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr v-for="(row, i) in rows" :key="row[setting.keyColumn] ? row[setting.keyColumn] : i" :ref="(el: any) => {
-                    if (!groupingRowsRefs[groupingIndex]) {
-                      groupingRowsRefs[groupingIndex] = [];
-                    }
-                    groupingRowsRefs[groupingIndex][i] = el;
-                  }
-                    " :name="'vtl-group-' + groupingIndex" class="vtl-tbody-tr" :class="typeof rowClasses === 'function' ? rowClasses(row) : rowClasses
-                      " @mouseenter="addHoverClassToTr" @mouseleave="removeHoverClassFromTr"
-                    @click="$emit('row-clicked', row)">
-                    <td v-if="hasCheckbox" class="vtl-tbody-td">
-                      <div>
-                        <input type="checkbox" class="vtl-tbody-checkbox" :ref="(el: any) => {
-                          (rowCheckbox as Array<HTMLElement>).push(el);
-                        }
-                          " :value="row[setting.keyColumn]" @click="checked(row, $event)" />
-                      </div>
-                    </td>
-                    <td v-for="(col, j) in (columns as Array<any>)" :key="j" class="vtl-tbody-td"
-                      :class="['vtl-tbody-td' + j].concat(col.columnClasses)" :style="col.columnStyles"
-                      @mouseover="addVerticalHighlight(j)" @mouseleave="removeVerticalHighlight(j)">
-                      <div v-if="col.display" v-html="col.display(row)"></div>
-                      <div v-else>
-                        <div v-if="setting.isSlotMode && slots[col.field]">
-                          <slot :name="col.field" :index="i" :value="row"></slot>
-                        </div>
-                        <span v-else>{{ row[col.field] }}</span>
-                      </div>
-                    </td>
-                  </tr>
-                </template>
-              </tbody>
-              <tbody v-else :set="(templateRows = groupingKey == '' ? [rows] : groupingRows)">
-                <template v-for="(rows, groupingIndex, index) in templateRows" :key="groupingIndex">
-                  <tr v-if="groupingKey != ''" class="vtl-tbody-tr vtl-group-tr">
-                    <td :colspan="hasCheckbox ? columns.length + 1 : columns.length" class="vtl-tbody-td vtl-group-td">
-                      <div class="flex">
-                        <div v-if="hasGroupToggle" class="animation">
-                          <a :ref="(el: any) => (toggleButtonRefs[groupingIndex] as any) = el" class="cursor-pointer"
-                            @click.prevent="toggleGroup(groupingIndex.toString())">▼</a>
-                        </div>
-                        <div class="ml-2" v-html="groupingDisplay
-                          ? groupingDisplay(groupingIndex)
-                          : groupingIndex
-                          "></div>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr v-for="(row, i) in rows" :ref="(el: any) => {
-                    if (!groupingRowsRefs[groupingIndex]) {
-                      groupingRowsRefs[groupingIndex] = [];
-                    }
-                    groupingRowsRefs[groupingIndex][i] = el;
-                  }
-                    " :name="'vtl-group-' + groupingIndex" :key="row[setting.keyColumn] ? row[setting.keyColumn] : i"
-                    class="vtl-tbody-tr" :class="typeof rowClasses === 'function' ? rowClasses(row) : rowClasses
-                      " @mouseenter="addHoverClassToTr" @mouseleave="removeHoverClassFromTr"
-                    @click="$emit('row-clicked', row)">
-                    <td v-if="hasCheckbox" class="vtl-tbody-td">
-                      <div>
-                        <input type="checkbox" class="vtl-tbody-checkbox"
-                          :ref="(el: any) => (rowCheckbox as Array<HTMLElement>).push(el)"
-                          :value="row[setting.keyColumn]" @click="checked(row, $event)" />
-                      </div>
-                    </td>
-                    <td v-for="(col, j) in (columns as Array<any>)" :key="j" class="vtl-tbody-td"
-                      :class="['vtl-tbody-td' + j].concat(col.columnClasses)" :style="col.columnStyles"
-                      @mouseover="addVerticalHighlight(j)" @mouseleave="removeVerticalHighlight(j)">
-                      <div v-if="col.display" v-html="col.display(row)"></div>
-                      <div v-else>
-                        <div v-if="setting.isSlotMode && slots[col.field]">
-                          <!-- <slot :name="col.field" :index="i" :value="row"></slot> -->
-                          <slot :name="col.field" :index="index" :childIndex="i" :value="row"></slot>
-                        </div>
-                        <span v-else>{{ row[col.field] }}</span>
-                      </div>
-                    </td>
-                  </tr>
-                </template>
-              </tbody>
-            </template>
-          </table>
-        </div>
-      </div>
-      <div class="vtl-paging vtl-row" v-if="(!skeletonScreen || !isLoading) && rows.length > 0">
-        <template v-if="!setting.isHidePaging">
-          <div class="vtl-paging-info col-sm-12 col-md-4">
-            <div role="status" aria-live="polite">
-              {{
-                stringFormat(messages.pagingInfo, setting.offset, setting.limit, total)
-              }}
-            </div>
-          </div>
-          <div class="vtl-paging-change-div col-sm-12 col-md-4">
-            <span class="vtl-paging-count-label">{{ messages.pageSizeChangeLabel }}</span>
-            <select class="vtl-paging-count-dropdown" v-model="setting.pageSize">
-              <option v-for="pageOption in (pageOptions as Array<pageOption>)" :value="pageOption.value"
-                :key="pageOption.value">
-                {{ pageOption.text }}
-              </option>
-            </select>
-            <span class="vtl-paging-page-label">{{ messages.gotoPageLabel }}</span>
-            <select class="vtl-paging-page-dropdown" v-model="setting.page">
-              <option v-for="n in setting.maxPage" :key="n" :value="parseInt(n.toString())">
-                {{ n }}
-              </option>
-            </select>
-          </div>
-          <div class="vtl-paging-pagination-div col-sm-12 col-md-4">
-            <div class="dataTables_paginate">
-              <ul class="vtl-paging-pagination-ul vtl-pagination">
-                <li class="vtl-paging-pagination-page-li vtl-paging-pagination-page-li-first page-item"
-                  :class="{ disabled: setting.page <= 1 }">
-                  <a class="vtl-paging-pagination-page-link vtl-paging-pagination-page-link-first page-link cursor-pointer"
-                    aria-label="Previous" @click.prevent="setting.page = 1">
-                    <span aria-hidden="true">&laquo;</span>
-                    <span class="sr-only">First</span>
-                  </a>
-                </li>
-                <li class="vtl-paging-pagination-page-li vtl-paging-pagination-page-li-prev page-item"
-                  :class="{ disabled: setting.page <= 1 }">
-                  <a class="vtl-paging-pagination-page-link vtl-paging-pagination-page-link-prev page-link cursor-pointer"
-                    aria-label="Previous" @click.prevent="prevPage">
-                    <span aria-hidden="true">&lt;</span>
-                    <span class="sr-only">Prev</span>
-                  </a>
-                </li>
-                <li class="vtl-paging-pagination-page-li vtl-paging-pagination-page-li-number page-item"
-                  v-for="n in setting.paging" :key="n" :class="{ disabled: setting.page === n }">
-                  <a class="vtl-paging-pagination-page-link vtl-paging-pagination-page-link-number page-link cursor-pointer"
-                    @click.prevent="movePage(n)">{{ n }}</a>
-                </li>
-                <li class="vtl-paging-pagination-page-li vtl-paging-pagination-page-li-next page-item"
-                  :class="{ disabled: setting.page >= setting.maxPage }">
-                  <a class="vtl-paging-pagination-page-link vtl-paging-pagination-page-link-next page-link cursor-pointer"
-                    aria-label="Next" @click.prevent="nextPage">
-                    <span aria-hidden="true">&gt;</span>
-                    <span class="sr-only">Next</span>
-                  </a>
-                </li>
-                <li class="vtl-paging-pagination-page-li vtl-paging-pagination-page-li-last page-item"
-                  :class="{ disabled: setting.page >= setting.maxPage }">
-                  <a class="vtl-paging-pagination-page-link vtl-paging-pagination-page-link-last page-link cursor-pointer"
-                    aria-label="Next" @click.prevent="setting.page = setting.maxPage">
-                    <span aria-hidden="true">&raquo;</span>
-                    <span class="sr-only">Last</span>
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </template>
-      </div>
-      <div class="vtl-row" v-else-if="!isLoading && rows.length == 0">
-        <div class="vtl-empty-msg col-sm-12 text-center">
-          {{ messages.noDataAvailable }}
-        </div>
-      </div>
-    </div>
-  </div>
-  <!-- eslint-disable @typescript-eslint/no-explicit-any -->
-</template>
 <script lang="ts">
+import ColumnResizer from "column-resizer/src/ColumnResizer.js";
+import * as DOMPurify from "dompurify";
+import { TableScroll } from "../tableScroll";
+import { isEqual } from "lodash-es";
+import { onUnmounted, nextTick } from "vue";
 import {
   defineComponent,
   ref,
@@ -269,8 +11,8 @@ import {
   computed,
   watch,
   onBeforeUpdate,
-  nextTick,
   onMounted,
+  Ref,
 } from "vue";
 
 interface pageOption {
@@ -305,19 +47,46 @@ export default defineComponent({
   name: "my-table",
   emits: {
     // eslint-disable-next-line
-    "return-checked-rows": (_rows: any[]) => true,
+    "return-checked-rows": (_rowModel: any[]) => true,
     // eslint-disable-next-line
-    "do-search": (_offset: number, _limit: number, _order: string, _sort: string) => true,
+    "do-search": (
+      _offset: number,
+      _limit: number,
+      _order: string,
+      _sort: string,
+      _page: number
+    ) => true,
     // eslint-disable-next-line
     "is-finished": (_elements: HTMLCollectionOf<Element>) => true,
     // eslint-disable-next-line
     "get-now-page": (_pageNo: number) => true,
     // eslint-disable-next-line
-    "row-clicked": (_row: any) => true,
+    "row-clicked": (_row: any, _event: any) => true,
     // eslint-disable-next-line
     "row-toggled": (_rows: any[], _isCollapsed: boolean) => true,
+    "on-filter": (_keyword: string) => true,
+    "width-update": (_columns: any) => true,
   },
   props: {
+    multiple: {
+      type: Boolean,
+      default: true,
+    },
+    resizeOptions: {
+      type: Object,
+      default: () => {},
+    },
+    id: {
+      type: String,
+      required: true,
+    },
+    scrollId: {
+      type: String,
+    },
+    scrollUse: {
+      type: Boolean,
+      default: false,
+    },
     // 是否讀取中 (is data loading)
     isLoading: {
       type: Boolean,
@@ -336,7 +105,7 @@ export default defineComponent({
     // Checkbox勾選後返回資料的型態 (Returns data type for checked of Checkbox)
     checkedReturnType: {
       type: String,
-      default: "key",
+      default: "row",
     },
     // 標題 (title)
     title: {
@@ -399,10 +168,10 @@ export default defineComponent({
       type: Object,
       default: () => {
         return {
-          pagingInfo: "Showing {0}-{1} of {2}",
-          pageSizeChangeLabel: "Row count:",
-          gotoPageLabel: "Go to page:",
-          noDataAvailable: "No data",
+          pagingInfo: "{2} 중 {0}-{1} 표시",
+          pageSizeChangeLabel: "행갯수:",
+          gotoPageLabel: "이동:",
+          noDataAvailable: "데이터가 없습니다",
         };
       },
     },
@@ -414,7 +183,7 @@ export default defineComponent({
     // 插槽模式 (V-slot mode)
     isSlotMode: {
       type: Boolean,
-      default: false,
+      default: true,
     },
     // 是否隱藏換頁資訊 (Hide paging)
     isHidePaging: {
@@ -426,6 +195,10 @@ export default defineComponent({
       type: Array,
       default: () => [
         {
+          value: 5,
+          text: 5,
+        },
+        {
           value: 10,
           text: 10,
         },
@@ -436,6 +209,10 @@ export default defineComponent({
         {
           value: 50,
           text: 50,
+        },
+        {
+          value: 100,
+          text: 100,
         },
       ],
     },
@@ -453,6 +230,9 @@ export default defineComponent({
     groupingDisplay: {
       type: Function,
       default: null,
+    },
+    minHeight: {
+      default: "auto",
     },
     // 設定表格高度 (Table's max height)
     maxHeight: {
@@ -473,17 +253,98 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
-    skeletonScreen: {
-      type: Boolean,
-      default: false,
+    checkboxWrapperClass: {
+      type: String,
+      default: "form-check form-check-info",
     },
-    skeletonRows: {
-      type: Number,
-      default: 5,
-    }
+    selectedItems: {
+      type: Array,
+    },
   },
   setup(props, { emit, slots }) {
+    const resizer = ref();
+    const resizerOptions = ref();
+    const emptyHeight = ref();
     let localTable = ref<HTMLElement | null>(null);
+    const tableHeader = ref<HTMLElement | null>(null);
+    const rootTable = ref<HTMLElement | null>(null);
+
+    const enterRow: any = ref(null);
+
+    ////////////////////////////////
+
+    ////////////////////////////////
+
+    const getColumnLength = () => {
+      if (props.hasCheckbox) return props.columns?.length + 1;
+      else return props.columns?.length;
+    };
+
+    const onRowClicked = (event: any, row: any) => {
+      // 기존에 선택된 행 해제
+      const root = document.querySelector(`#${props.id}-root`);
+      if (root) {
+        const dom = root.querySelectorAll(".row-clicked");
+        if (dom) {
+          for (let i = 0; i < dom.length; i++) {
+            dom[i].classList?.remove("row-clicked");
+          }
+        }
+      }
+
+      enterRow.value?.classList?.add("row-clicked");
+      emit("row-clicked", row, event);
+      return;
+    };
+
+    const scrollHandler = ref(
+      new TableScroll(
+        `#${props.scrollId} > .vtl-card-body > .vtl-row > .col-sm-12 > .vtl-table`
+      )
+    );
+
+    // 검색
+    const closeFilterLayer = (evt: any) => {
+      const id = document.querySelector("#filterRef");
+      if (!id) return;
+
+      const filterTargets = ["filter-close-icon", "filter-close", "filter-icon"];
+      if (
+        !filterTargets.includes(evt.target.getAttribute("name")) &&
+        !id.contains(evt.target)
+      ) {
+        props.columns.forEach((col: any) => {
+          closeLayer(col);
+        });
+      }
+    };
+
+    const resizeEvent = () => {
+      const root = document.querySelector(`#${props.id}-root`);
+      if (root) {
+        // const { width } = root?.getBoundingClientRect() || null;
+        // console.log(width)
+        // localTable.value?.setAttribute("style", `width: ${width}px !important`);
+        resizer.value.reset(resizerOptions.value);
+      }
+    };
+
+    const closeLayer = (col: any) => {
+      col.showFilter = false;
+    };
+
+    const openLayer = (evt: any, col: any) => {
+      evt.stopPropagation();
+      col.showFilter = true;
+    };
+
+    const searchFilter = (col: any) => {
+      emit("on-filter", {
+        keyword: col.keyword,
+        columnData: col,
+      });
+    };
+    //
 
     // 檢查下拉選單中是否包含預設一頁顯示筆數 (Validate dropdown's values have page-size value or not)
     let tmpPageOptions = props.pageOptions as Array<pageOption>;
@@ -578,7 +439,7 @@ export default defineComponent({
     });
 
     // 已選擇中的資料 (Checked rows)
-    const isChecked = ref<Array<any>>([]);
+    const checkModel = ref<Array<any>>([]);
 
     // 組件內用資料 (Data rows for local)
     const localRows = computed(() => {
@@ -645,29 +506,39 @@ export default defineComponent({
     /**
      * 監聽全勾選Checkbox (Check all checkboxes for monitoring)
      */
-    watch(
+    const stopWatch1 = watch(
       () => setting.isCheckAll,
       (state: boolean) => {
         if (props.hasCheckbox) {
           setting.isIndeterminate = false;
-          isChecked.value = [];
+          checkModel.value = [];
           if (state) {
-            let tmpRows = (props.isStaticMode) ? props.rows.slice((setting.offset - 1), setting.limit) : props.rows;
+            let tmpRows = props.isStaticMode
+              ? props.rows.slice(setting.offset - 1, setting.limit)
+              : props.rows;
             if (props.checkedReturnType == "row") {
-              isChecked.value = tmpRows;
+              checkModel.value = tmpRows
+                .map((val: any) => {
+                  if (!val.disabled) return val;
+                  else return null;
+                })
+                .filter((item: any) => item);
             } else {
-              tmpRows.forEach((val: any) => {
-                isChecked.value.push(val[setting.keyColumn]);
-              });
+              checkModel.value = tmpRows
+                .map((val: any) => {
+                  if (!val.disabled) return val;
+                  else return null;
+                })
+                .filter((item: any) => item);
             }
           }
           rowCheckbox.value.forEach((val: HTMLInputElement) => {
-            if (val) {
+            if (val && !val.disabled) {
               val.checked = state;
             }
           });
           // 回傳畫面上選上的資料 (Return the selected data on the screen)
-          emit("return-checked-rows", isChecked.value);
+          emit("return-checked-rows", checkModel.value);
         }
       }
     );
@@ -675,7 +546,7 @@ export default defineComponent({
     /**
      * 監控有無顯示Checkbox變化 (hasCeckbox props for monitoring)
      */
-    watch(
+    const stopWatch2 = watch(
       () => props.hasCheckbox,
       (v) => {
         if (!v) {
@@ -684,50 +555,87 @@ export default defineComponent({
       }
     );
 
+    const checkDup = (data: any) => {
+      for (let i = 0; i < checkModel.value.length; i++) {
+        const item = checkModel.value[i];
+        const check = isEqual(item, data);
+        if (check) return check;
+      }
+      return false;
+    };
+
+    const getCheckedIndex = (data: any) => {
+      for (let i = 0; i < checkModel.value.length; i++) {
+        const item = checkModel.value[i];
+        const check = isEqual(item, data);
+        if (check) {
+          return i;
+        }
+      }
+
+      return -1;
+    };
+
     /**
      * Checkbox點擊事件 (Checkbox click event)
      */
     const checked = (row: any, event: MouseEvent): void => {
       event.stopPropagation();
+
       setting.isIndeterminate = false;
       let checkboxValue = row[setting.keyColumn];
       if (props.checkedReturnType == "row") {
         checkboxValue = row;
       }
+
+      // 체크!
       if ((event.target as HTMLInputElement).checked) {
-        isChecked.value.push(checkboxValue);
-      } else {
-        const index = isChecked.value.indexOf(checkboxValue);
-        if (index >= 0) {
-          isChecked.value.splice(index, 1);
+        if (props.multiple) {
+          if (!checkDup(checkboxValue)) checkModel.value.push(checkboxValue);
+        } else {
+          checkModel.value = null;
+          checkModel.value = [checkboxValue];
         }
+      } else {
+        // 체크 해제!
+        const index = getCheckedIndex(checkboxValue);
+        if (index >= 0) {
+          checkModel.value.splice(index, 1);
+        }
+
+        // 전체 체크박스 상태 변경
+        if (checkModel.value.length === 0) clearChecked();
       }
-      if (isChecked.value.length == props.rows.length) {
+
+      // 전체선택 버튼 처리
+      if (checkModel.value.length == props.rows.length) {
         if (setting.isCheckAll) {
-          emit("return-checked-rows", isChecked.value);
+          emit("return-checked-rows", checkModel.value);
         }
         setting.isCheckAll = true;
       } else {
-        if (isChecked.value.length > 0) {
+        if (checkModel.value.length > 0) {
           setting.isIndeterminate = true;
         }
         // 回傳畫面上選上的資料 (Return the selected data on the screen)
-        emit("return-checked-rows", isChecked.value);
+        emit("return-checked-rows", checkModel.value);
       }
     };
 
     /**
      * 清空畫面上所有選擇資料 (Clear all selected data on the screen)
      */
-    const clearChecked = () => {
-      isChecked.value = [];
+    const clearChecked = (callback: boolean = true) => {
+      setting.isCheckAll = false;
+      setting.isIndeterminate = false;
+      checkModel.value = [];
       rowCheckbox.value.forEach((val: HTMLInputElement) => {
         if (val && val.checked) {
           val.checked = false;
         }
       });
       // 回傳畫面上選上的資料 (Return the selected data on the screen)
-      emit("return-checked-rows", isChecked.value);
+      if (callback) emit("return-checked-rows", checkModel.value);
     };
 
     ////////////////////////////
@@ -751,7 +659,7 @@ export default defineComponent({
       let limit = setting.pageSize;
       setting.order = order;
       setting.sort = sort;
-      emit("do-search", offset, limit, order, sort);
+      emit("do-search", offset, limit, order, sort, setting.page);
 
       // 清空畫面上選擇的資料 (Clear the selected data on the screen)
       if (setting.isCheckAll) {
@@ -774,21 +682,28 @@ export default defineComponent({
       setting.isCheckAll = false;
       setting.isIndeterminate = false;
       if (props.hasCheckbox) {
-        isChecked.value = [];
+        checkModel.value = [];
       }
       let order = setting.order;
       let sort = setting.sort;
       let offset = (page - 1) * setting.pageSize;
       let limit = setting.pageSize;
+
       if (!props.isReSearch || page > 1 || page == prevPage) {
         // 非重新查詢發生的頁碼變動才執行呼叫查詢 (Call query will only be executed if the page number is changed without re-query)
-        emit("do-search", offset, limit, order, sort);
+        emit("do-search", offset, limit, order, sort, page);
       }
     };
     // 監聽頁碼切換 (Monitor page switching)
-    watch(() => setting.page, changePage);
+    const stopWatch3 = watch(
+      () => setting.page,
+      (val: number, old: any) => {
+        changePage(val, old);
+      },
+      { immediate: true }
+    );
     // 監聽手動頁碼切換 (Monitor manual page switching)
-    watch(
+    const stopWatch4 = watch(
       () => props.page,
       (val) => {
         if (val <= 1) {
@@ -818,13 +733,24 @@ export default defineComponent({
       }
     };
     // 監聽組件內顯示筆數切換 (Monitor display number switch from component)
-    watch(() => setting.pageSize, changePageSize);
+    const stopWatch5 = watch(() => setting.pageSize, changePageSize);
     // 監聽來自Prop的顯示筆數切換 (Monitor display number switch from prop)
     watch(
       () => props.pageSize,
       (newPageSize) => {
         setting.pageSize = newPageSize;
       }
+    );
+    const stopWatch6 = watch(
+      () => props.selectedItems,
+      (val: any) => {
+        if (Array.isArray(val)) checkModel.value = val;
+
+        if (val?.length === 0) {
+          clearChecked(false);
+        }
+      },
+      { immediate: true }
     );
 
     /**
@@ -845,6 +771,15 @@ export default defineComponent({
       setting.page = page;
     };
 
+    const checkState = (row: any) => {
+      for (let i = 0; i < checkModel.value.length; i++) {
+        const state = checkModel.value[i];
+        const checked = isEqual(row, state);
+        if (checked) return true;
+      }
+      return false;
+    };
+
     /**
      * 下一頁 (Next page)
      */
@@ -857,9 +792,9 @@ export default defineComponent({
     };
 
     // 監聽資料變更 (Monitoring data changes)
-    watch(
+    const stopWatch7 = watch(
       () => props.rows,
-      () => {
+      (arr: any[]) => {
         if (props.isReSearch || props.isStaticMode) {
           setting.page = 1;
         }
@@ -968,7 +903,8 @@ export default defineComponent({
      */
     const addHoverClassToTr = (mouseEvent: MouseEvent) => {
       if (mouseEvent.target instanceof HTMLElement) {
-        mouseEvent.target.classList.add("hover");
+        // mouseEvent.target.classList.add("hover");
+        enterRow.value = mouseEvent.target;
       }
     };
 
@@ -979,14 +915,15 @@ export default defineComponent({
      */
     const removeHoverClassFromTr = (mouseEvent: MouseEvent) => {
       if (mouseEvent.target instanceof HTMLElement) {
-        mouseEvent.target.classList.remove("hover");
+        // mouseEvent.target.classList.remove("hover");
+        enterRow.value = null;
       }
     };
 
     /**
      * Add hover class to td
-     * 
-     * @param {Number} index 
+     *
+     * @param {Number} index
      */
     const addVerticalHighlight = (index: number) => {
       if (!setting.isVerticalHighlight) {
@@ -1004,7 +941,7 @@ export default defineComponent({
     /**
      * Remove hover class from td
      *
-     * @param {Number} index 
+     * @param {Number} index
      */
     const removeVerticalHighlight = (index: number) => {
       if (!setting.isVerticalHighlight) {
@@ -1019,11 +956,38 @@ export default defineComponent({
       }
     };
 
-    /**
-     * 模板資料 (Template data)
-     */
-    const templateRows = ref<Array<any>>([]);
+    const setMinHeight = () => {
+      if (props.rows.length === 0) {
+        if (rootTable.value && tableHeader.value) {
+          const rect = tableHeader.value.getBoundingClientRect();
+          const tableRect = rootTable.value.getBoundingClientRect();
+          if (!rect.height || !tableRect.height) return;
+          const salt = 15;
+          const height = rect.height + salt;
+          emptyHeight.value = tableRect.height - height + "px";
+        } else {
+          if (props.minHeight.includes("px"))
+            emptyHeight.value = parseInt(props.minHeight) - 30 + "px";
+          else if (props.maxHeight.includes("px"))
+            emptyHeight.value = parseInt(props.maxHeight) - 30 + "px";
+        }
+      } else {
+        emptyHeight.value = "0px";
+      }
+    };
 
+    const heightWatch = watch(
+      () => props.rows,
+      (val: any) => {
+        nextTick(() => {
+          setMinHeight();
+        });
+      },
+      {
+        immediate: true,
+      }
+    );
+    setMinHeight();
     /**
      * 組件掛載後事件 (Mounted Event)
      */
@@ -1032,26 +996,71 @@ export default defineComponent({
         if (props.rows.length > 0) {
           callIsFinished();
         }
+
+        window.addEventListener("resize", resizeEvent);
+
+        // 필터 레이어 닫기 이벤트
+        window.addEventListener("click", closeFilterLayer);
+
+        // col resize
+        const table = document.querySelector(`#${props.id}`);
+        const root = document.querySelector(`#${props.id}-root`);
+
+        const { width } = root?.getBoundingClientRect() || null;
+
+        if (table) {
+          resizerOptions.value = {
+            headerOnly: true,
+            liveDrag: true,
+            resizeMode: "overflow",
+            // minWidth: width,
+            disabledColumns: props.hasCheckbox ? [0] : [], // 특정 컬럼을 안쓰려면 여기를 수정
+            ...props.resizeOptions,
+            serialize: false,
+            onResize: (evt: any) => {
+              resizer.value.tb.columns
+                .filter((col: any) => {
+                  if (col.getAttribute("class")?.includes("checkbox") === false) {
+                    return col;
+                  }
+                })
+                .forEach((col: any, index: number) => {
+                  (props.columns[index] as any).width = col.style.width;
+                });
+              nextTick(() => {
+                emit("width-update", props.columns);
+              });
+            },
+          };
+          resizer.value = new ColumnResizer(table, resizerOptions.value);
+        }
       });
     });
-    const skeletonElementRef = ref<HTMLElement | null>(null);
-    const randomWidthRight = (index: number) => {
-      // Ensure tableWidth is dynamically fetched from the ref
-      const tableWidths = skeletonElementRef.value?.clientWidth || 1100; // Fallback to 1100px if the element is not yet mounted
-      const tableWidth = tableWidths < 500 ? 1200 : tableWidths;
-      const columnWidth = tableWidth / props.columns?.length; // Calculate width per column
-      const randomWidth = Math.floor(columnWidth * 0.6 + ((index * 31) % (columnWidth * 0.4))); // 50% to 95% of column width
-      return {
-        width: `${randomWidth}px`,
-      };
-    };
+
+    onUnmounted(() => {
+      stopWatch1();
+      stopWatch2();
+      stopWatch3();
+      stopWatch4();
+      stopWatch5();
+      stopWatch6();
+      stopWatch7();
+      heightWatch();
+      window.removeEventListener("click", closeFilterLayer);
+      window.removeEventListener("resize", resizeEvent);
+      scrollHandler.value?.stopScroll();
+      scrollHandler.value = null;
+
+      resizer.value?.destroy();
+    });
+
     return {
-      // skeleton start
-      skeletonElementRef,
-      randomWidthRight,
-      // skeleton end
+      getColumnLength,
       slots,
       localTable,
+      rootTable,
+      tableHeader,
+      emptyHeight,
       localRows,
       setting,
       rowCheckbox,
@@ -1070,7 +1079,13 @@ export default defineComponent({
       removeHoverClassFromTr,
       addVerticalHighlight,
       removeVerticalHighlight,
-      templateRows
+      checkState,
+      openLayer,
+      searchFilter,
+      closeLayer,
+      scrollHandler,
+      sanitize: DOMPurify.default?.sanitize,
+      onRowClicked,
     };
   },
   watch: {
@@ -1081,12 +1096,499 @@ export default defineComponent({
 });
 </script>
 
+<template>
+  <!-- eslint-disable @typescript-eslint/no-explicit-any -->
+  <div class="vtl vtl-card" :id="`${id}-root`" ref="rootTable">
+    <div class="vtl-card-title" v-if="title" :id="scrollId">{{ title }}</div>
+    <div class="vtl-card-body">
+      <div class="vtl-row">
+        <div
+          class="vtl-table-responsive col-sm-12"
+          :class="{
+            'fixed-first-column': isFixedFirstColumn,
+            'fixed-first-second-column': isFixedFirstColumn && hasCheckbox,
+          }"
+          :style="`min-height: ${minHeight}; max-height: ${maxHeight};`"
+        >
+          <div v-if="isLoading" class="vtl-loading-mask">
+            <div class="vtl-loading-content">
+              <span style="color: white">Loading...</span>
+            </div>
+          </div>
+          <table
+            :id="id"
+            class="vtl-table vtl-table-hover vtl-table-bordered"
+            style="width: 100% !important"
+            ref="localTable"
+          >
+            <colgroup>
+              <col v-if="hasCheckbox" class="vtl-checkbox-th" />
+              <col
+                v-for="(col, index) in (columns as Array<any>)"
+                :key="`col-${index}`"
+                :style="
+                  Object.assign(
+                    {
+                      width: col.width || `auto`,
+                      'min-width': col.width < 80 ? `${col.width}px` : '80px',
+                    },
+                    col.headerStylest
+                  )
+                "
+              />
+            </colgroup>
+            <thead class="vtl-thead" ref="tableHeader">
+              <tr class="vtl-thead-tr">
+                <th v-if="hasCheckbox" class="vtl-thead-th vtl-checkbox-th">
+                  <div :class="`${checkboxWrapperClass}`">
+                    <input
+                      :disabled="!multiple"
+                      type="checkbox"
+                      class="vtl-thead-checkbox form-check-input cursor-pointer"
+                      :indeterminate="setting.isIndeterminate"
+                      v-model="setting.isCheckAll"
+                    />
+                  </div>
+                </th>
+                <th
+                  v-for="(col, index) in (columns as Array<any>)"
+                  class="vtl-thead-th"
+                  :class="col.headerClasses"
+                  :key="index"
+                >
+                  <div class="d-flex align-items-center">
+                    <div
+                      class="vtl-thead-column"
+                      :class="{
+                        'vtl-sortable': col.sortable,
+                        'vtl-both': col.sortable,
+                        'vtl-asc': setting.order === col.field && setting.sort === 'asc',
+                        'vtl-desc':
+                          setting.order === col.field && setting.sort === 'desc',
+                      }"
+                      @click.prevent="col.sortable ? doSort(col.field) : false"
+                      v-html="sanitize(col.label)"
+                    ></div>
+
+                    <div>
+                      <i
+                        name="filter-icon"
+                        class="mdi mdi-filter-outline filter-icon cursor-pointer"
+                        @click="openLayer($event, col)"
+                        v-if="col.filter"
+                      ></i>
+
+                      <transition>
+                        <div
+                          class="card filter-root"
+                          v-if="col.showFilter"
+                          id="filterRef"
+                        >
+                          <div class="card-body">
+                            <div
+                              class="d-flex align-items-center justify-content-between mb-2"
+                            >
+                              <div>
+                                <span class="fs-14 fw-600">{{ col.label }} 검색</span>
+                              </div>
+                              <div
+                                @click="closeLayer(col)"
+                                class="cursor-pointer"
+                                name="filter-close"
+                              >
+                                <i
+                                  class="mdi mdi-close close-filter"
+                                  name="filter-close-icon"
+                                ></i>
+                              </div>
+                            </div>
+
+                            <div class="d-flex align-items-center">
+                              <input
+                                type="text"
+                                class="form-control"
+                                placeholder="검색어 입력"
+                                v-model="col.keyword"
+                                @keydown.enter="searchFilter(col)"
+                              />
+
+                              <button
+                                class="btn btn-transparent search-btn mx-2"
+                                @click="searchFilter"
+                              >
+                                <i class="mdi mdi-magnify"></i>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </transition>
+                    </div>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <template v-if="rows.length > 0">
+              <tbody
+                v-if="isStaticMode"
+                class="vtl-tbody"
+                :set="(templateRows = groupingKey == '' ? [localRows] : localRows)"
+              >
+                <template
+                  v-for="(rows, groupingIndex) in templateRows"
+                  :key="groupingIndex"
+                >
+                  <tr v-if="groupingKey != ''" class="vtl-tbody-tr vtl-group-tr">
+                    <td
+                      :colspan="hasCheckbox ? columns.length + 1 : columns.length"
+                      class="vtl-tbody-td vtl-group-td"
+                    >
+                      <div class="flex">
+                        <div v-if="hasGroupToggle" class="animation">
+                          <a
+                            :ref="(el: any) => (toggleButtonRefs[groupingIndex] as any) = el"
+                            class="cursor-pointer"
+                            @click.prevent="toggleGroup(groupingIndex.toString())"
+                            >▼</a
+                          >
+                        </div>
+                        <div
+                          class="ml-2"
+                          v-html="
+                            groupingDisplay
+                              ? sanitize(groupingDisplay(groupingIndex))
+                              : sanitize(groupingIndex)
+                          "
+                        ></div>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr
+                    v-for="(row, i) in rows"
+                    :key="row[setting.keyColumn] ? row[setting.keyColumn] : i"
+                    :ref="
+                      (el: any) => {
+                        if (!groupingRowsRefs[groupingIndex]) {
+                          groupingRowsRefs[groupingIndex] = [];
+                        }
+                        groupingRowsRefs[groupingIndex][i] = el;
+                      }
+                    "
+                    :name="'vtl-group-' + groupingIndex"
+                    class="vtl-tbody-tr"
+                    :class="
+                      typeof rowClasses === 'function' ? rowClasses(row) : rowClasses
+                    "
+                    @mouseenter="addHoverClassToTr"
+                    @mouseleave="removeHoverClassFromTr"
+                    @click="onRowClicked($event, row)"
+                  >
+                    <td v-if="hasCheckbox" class="vtl-tbody-td">
+                      <div :class="`${checkboxWrapperClass}`">
+                        <input
+                          type="checkbox"
+                          class="vtl-tbody-checkbox form-check-input cursor-pointer"
+                          :ref="
+                            (el: any) => {
+                              (rowCheckbox as Array<HTMLElement>).push(el);
+                            }
+                          "
+                          :value="row[setting.keyColumn]"
+                          :disabled="row.disabled"
+                          :checked="checkState(row)"
+                          @click="checked(row, $event)"
+                        />
+                      </div>
+                    </td>
+                    <td
+                      v-for="(col, j) in (columns as Array<any>)"
+                      :key="j"
+                      class="vtl-tbody-td"
+                      :class="['vtl-tbody-td' + j].concat(col.columnClasses)"
+                      :style="col.columnStyles"
+                      @mouseover="addVerticalHighlight(j)"
+                      @mouseleave="removeVerticalHighlight(j)"
+                    >
+                      <div v-if="col.display" v-html="sanitize(col.display(row))"></div>
+                      <div v-else>
+                        <div v-if="setting.isSlotMode && slots[col.field]">
+                          <slot :name="col.field" :value="row"></slot>
+                        </div>
+                        <span v-else>{{ row[col.field] }}</span>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+              <tbody
+                v-else
+                :set="(templateRows = groupingKey == '' ? [rows] : groupingRows)"
+              >
+                <template
+                  v-for="(rows, groupingIndex) in templateRows"
+                  :key="groupingIndex"
+                >
+                  <tr v-if="groupingKey != ''" class="vtl-tbody-tr vtl-group-tr">
+                    <td
+                      :colspan="hasCheckbox ? columns.length + 1 : columns.length"
+                      class="vtl-tbody-td vtl-group-td"
+                    >
+                      <div class="flex">
+                        <div v-if="hasGroupToggle" class="animation">
+                          <a
+                            :ref="(el: any) => (toggleButtonRefs[groupingIndex] as any) = el"
+                            class="cursor-pointer"
+                            @click.prevent="toggleGroup(groupingIndex.toString())"
+                            >▼</a
+                          >
+                        </div>
+                        <div
+                          class="ml-2"
+                          v-html="
+                            groupingDisplay
+                              ? sanitize(groupingDisplay(groupingIndex))
+                              : sanitize(groupingIndex)
+                          "
+                        ></div>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr
+                    v-for="(row, i) in rows"
+                    :ref="
+                      (el: any) => {
+                        if (!groupingRowsRefs[groupingIndex]) {
+                          groupingRowsRefs[groupingIndex] = [];
+                        }
+                        groupingRowsRefs[groupingIndex][i] = el;
+                      }
+                    "
+                    :name="'vtl-group-' + groupingIndex"
+                    :key="row[setting.keyColumn] ? row[setting.keyColumn] : i"
+                    class="vtl-tbody-tr"
+                    :class="
+                      typeof rowClasses === 'function' ? rowClasses(row) : rowClasses
+                    "
+                    @mouseenter="addHoverClassToTr"
+                    @mouseleave="removeHoverClassFromTr"
+                    @click="onRowClicked($event, row)"
+                  >
+                    <td v-if="hasCheckbox" class="vtl-tbody-td">
+                      <div :class="`${checkboxWrapperClass}`">
+                        <input
+                          type="checkbox"
+                          class="vtl-tbody-checkbox form-check-input cursor-pointer"
+                          :ref="(el: any) => (rowCheckbox as Array<HTMLElement>).push(el)"
+                          :value="row[setting.keyColumn]"
+                          :disabled="row.disabled"
+                          :checked="checkState(row)"
+                          @click="checked(row, $event)"
+                        />
+                      </div>
+                    </td>
+                    <td
+                      v-for="(col, j) in (columns as Array<any>)"
+                      :key="j"
+                      class="vtl-tbody-td"
+                      :class="['vtl-tbody-td' + j].concat(col.columnClasses)"
+                      :style="col.columnStyles"
+                      @mouseover="addVerticalHighlight(j)"
+                      @mouseleave="removeVerticalHighlight(j)"
+                    >
+                      <div v-if="col.display" v-html="sanitize(col.display(row))"></div>
+                      <div v-else>
+                        <div v-if="setting.isSlotMode && slots[col.field]">
+                          <slot :name="col.field" :value="row"></slot>
+                        </div>
+                        <span v-else>{{ row[col.field] }}</span>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </template>
+
+            <template v-else>
+              <tbody>
+                <tr>
+                  <td :colspan="getColumnLength()" :style="`height: ${emptyHeight};`">
+                    <div class="vtl-empty-msg col-sm-12 text-center">
+                      {{ messages.noDataAvailable }}
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </template>
+          </table>
+        </div>
+      </div>
+      <div
+        class="vtl-paging vtl-row d-flex justify-content-end align-items-center"
+        :class="{ 'display-none': setting.isHidePaging }"
+        v-if="rows.length > 0"
+      >
+        <template v-if="!setting.isHidePaging">
+          <!-- <div class="vtl-paging-info col-sm-12 col-md-4">
+            <div role="status" aria-live="polite">
+              {{
+                stringFormat(messages.pagingInfo, setting.offset, setting.limit, total)
+              }}
+            </div>
+          </div> -->
+
+          <div
+            class="vtl-paging-pagination-div col-sm-12 col-md-12 d-flex align-items-center"
+            :class="{
+              'justify-content-between': scrollId,
+              'justify-content-end': !scrollId,
+            }"
+          >
+            <div class="d-flex justify-content-start my-2 mx-2" v-if="scrollUse">
+              <button
+                class="btn btn-normal scroll-btn"
+                @mouseenter="scrollHandler.scrollLeftSide"
+                @mouseleave="scrollHandler.stopScroll"
+              >
+                <i class="mdi mdi-chevron-left"></i>
+              </button>
+              <button
+                class="btn btn-normal scroll-btn me-2"
+                @mouseenter="scrollHandler.scrollRightSide"
+                @mouseleave="scrollHandler.stopScroll"
+              >
+                <i class="mdi mdi-chevron-right"></i>
+              </button>
+            </div>
+            <div v-else></div>
+
+            <div class="d-flex align-items-center">
+              <div class="vtl-paging-change-div mx-4 d-flex">
+                <span class="vtl-paging-count-label">{{
+                  messages.pageSizeChangeLabel
+                }}</span>
+                <select class="vtl-paging-count-dropdown" v-model="setting.pageSize">
+                  <option
+                    v-for="pageOption in (pageOptions as Array<pageOption>)"
+                    :value="pageOption.value"
+                    :key="pageOption.value"
+                  >
+                    {{ pageOption.text }}
+                  </option>
+                </select>
+                <span class="vtl-paging-page-label">{{ messages.gotoPageLabel }}</span>
+                <select class="vtl-paging-page-dropdown" v-model="setting.page">
+                  <option
+                    v-for="n in setting.maxPage"
+                    :key="n"
+                    :value="parseInt(n.toString())"
+                  >
+                    {{ n }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="dataTables_paginate">
+                <ul class="vtl-paging-pagination-ul vtl-pagination">
+                  <li
+                    :disable="setting.page <= 1"
+                    class="vtl-paging-pagination-page-li vtl-paging-pagination-page-li-first page-item"
+                    :class="{ disabled: setting.page <= 1 }"
+                  >
+                    <a
+                      class="vtl-paging-pagination-page-link vtl-paging-pagination-page-link-first page-link cursor-pointer"
+                      aria-label="Previous"
+                      @click.prevent="setting.page = 1"
+                    >
+                      <span aria-hidden="true"
+                        ><i class="mdi mdi-chevron-double-left"></i
+                      ></span>
+                      <span class="sr-only">First</span>
+                    </a>
+                  </li>
+                  <li
+                    :disable="setting.page <= 1"
+                    class="vtl-paging-pagination-page-li vtl-paging-pagination-page-li-prev page-item"
+                    :class="{ disabled: setting.page <= 1 }"
+                  >
+                    <a
+                      class="vtl-paging-pagination-page-link vtl-paging-pagination-page-link-prev page-link cursor-pointer"
+                      aria-label="Previous"
+                      @click.prevent="prevPage"
+                    >
+                      <span aria-hidden="true"><i class="mdi mdi-chevron-left"></i></span>
+                      <span class="sr-only">Prev</span>
+                    </a>
+                  </li>
+                  <li
+                    class="vtl-paging-pagination-page-li vtl-paging-pagination-page-li-number page-item"
+                    v-for="n in setting.paging"
+                    :key="n"
+                    :class="{
+                      disabled: setting.page === n,
+                      activated: setting.page === n,
+                    }"
+                  >
+                    <a
+                      class="vtl-paging-pagination-page-link vtl-paging-pagination-page-link-number page-link cursor-pointer"
+                      @click.prevent="movePage(n)"
+                      >{{ n }}</a
+                    >
+                  </li>
+                  <li
+                    :disable="setting.page >= setting.maxPage"
+                    class="vtl-paging-pagination-page-li vtl-paging-pagination-page-li-next page-item"
+                    :class="{ disabled: setting.page >= setting.maxPage }"
+                  >
+                    <a
+                      class="vtl-paging-pagination-page-link vtl-paging-pagination-page-link-next page-link cursor-pointer"
+                      aria-label="Next"
+                      @click.prevent="nextPage"
+                    >
+                      <span aria-hidden="true"
+                        ><i class="mdi mdi-chevron-right"></i
+                      ></span>
+                      <span class="sr-only">Next</span>
+                    </a>
+                  </li>
+                  <li
+                    :disable="setting.page >= setting.maxPage"
+                    class="vtl-paging-pagination-page-li vtl-paging-pagination-page-li-last page-item"
+                    :class="{ disabled: setting.page >= setting.maxPage }"
+                  >
+                    <a
+                      class="vtl-paging-pagination-page-link vtl-paging-pagination-page-link-last page-link cursor-pointer"
+                      aria-label="Next"
+                      @click.prevent="setting.page = setting.maxPage"
+                    >
+                      <span aria-hidden="true"
+                        ><i class="mdi mdi-chevron-double-right"></i
+                      ></span>
+                      <span class="sr-only">Last</span>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+      <!-- <div class="vtl-row" ref="emptyArea" v-else>
+        <div class="vtl-empty-msg col-sm-12 text-center">
+          {{ messages.noDataAvailable }}
+        </div>
+      </div> -->
+    </div>
+  </div>
+  <!-- eslint-disable @typescript-eslint/no-explicit-any -->
+</template>
+
 <style scoped>
+.display-none {
+  display: none !important;
+}
 .vtl-checkbox-th {
   width: 1%;
   min-width: 38px;
 }
-
 .vtl-checkbox-td {
   width: 1%;
   min-width: 38px;
@@ -1100,7 +1602,7 @@ export default defineComponent({
   cursor: pointer;
   background-position: right;
   background-repeat: no-repeat;
-  padding-right: 30px !important;
+  padding-right: 18px !important;
 }
 
 .vtl-asc {
@@ -1112,21 +1614,16 @@ export default defineComponent({
 }
 
 .vtl-loading-mask {
-  /* position: absolute;
-    z-index: 3;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%; */
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  /* flex-flow: column; */
+  flex-flow: column;
   transition: opacity 0.3s ease;
-  /* new added */
-  height: 400px;
-  align-items: center;
-  justify-content: center;
-  /* new added end  */
 }
 
 .vtl-loading-content {
@@ -1146,6 +1643,7 @@ export default defineComponent({
   word-wrap: break-word;
   background-color: #fff;
   background-clip: border-box;
+  border: none;
 }
 
 select {
@@ -1157,15 +1655,24 @@ select {
   margin-bottom: 0;
 }
 
+table {
+  display: table;
+}
+
+.vtl {
+  background-color: inherit;
+}
+
 .vtl-table {
-  width: 100%;
-  margin-bottom: 1rem;
+  width: 100% !important;
+  /* margin-bottom: 1rem; */
   color: #212529;
   border-collapse: collapse;
 }
 
 th {
   text-align: inherit;
+  white-space: nowrap;
 }
 
 tr {
@@ -1174,10 +1681,10 @@ tr {
   border-color: inherit;
 }
 
-.vtl-table-bordered thead td,
+/* .vtl-table-bordered thead td,
 .vtl-table-bordered thead th {
   border-bottom-width: 2px;
-}
+} */
 
 .vtl-table thead th {
   vertical-align: bottom;
@@ -1190,20 +1697,29 @@ tr {
 .vtl-table-bordered td,
 .vtl-table-bordered th {
   border: 1px solid #dee2e6;
+  border-top: 0px;
+}
+
+.vtl-table-bordered th:first-child {
+  border-left: 0px;
+}
+
+.vtl-table-bordered th:last-child {
+  border-right: 0px;
 }
 
 .vtl-table td,
 .vtl-table th {
-  padding: 0.75rem;
+  padding: 4px 11px !important;
   vertical-align: top;
-  border-top: 1px solid #dee2e6;
+  /* border-top: 1px solid #dee2e6; */
   vertical-align: middle;
 }
 
-.vtl-table-hover tbody tr:hover {
+/* .vtl-table-hover tbody tr:hover {
   color: #212529;
   background-color: #ececec;
-}
+} */
 
 .vtl-table-responsive {
   display: block;
@@ -1212,7 +1728,7 @@ tr {
   -webkit-overflow-scrolling: touch;
 }
 
-.vtl-table-responsive>.vtl-table-bordered {
+.vtl-table-responsive > .vtl-table-bordered {
   border: 0;
 }
 
@@ -1294,11 +1810,9 @@ tr {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
-
-  .vtl-table-responsive-sm>.table-bordered {
+  .vtl-table-responsive-sm > .table-bordered {
     border: 0;
   }
-
   .col-md-4 {
     -ms-flex: 0 0 33.333333%;
     flex: 0 0 33.333333%;
@@ -1311,7 +1825,6 @@ tr {
   top: 0;
   z-index: 1;
 }
-
 .vtl-table tbody th {
   position: sticky;
   left: 0;
@@ -1321,13 +1834,11 @@ tr {
 .fixed-first-column {
   overflow-x: auto;
 }
-
 .fixed-first-column tr th:first-child {
   position: sticky;
   left: 0;
   z-index: 2;
 }
-
 .fixed-first-column tr td:first-child {
   position: sticky;
   left: 0;
@@ -1343,7 +1854,6 @@ tr {
   width: 102%;
   height: 102%;
 }
-
 .fixed-first-column tr .vtl-checkbox-th:first-child::before {
   content: "";
   position: absolute;
@@ -1353,7 +1863,6 @@ tr {
   width: 103%;
   height: 102%;
 }
-
 .fixed-first-column tr td:first-child::before,
 .fixed-first-column tr td:nth-child(2)::before {
   content: "";
@@ -1364,7 +1873,6 @@ tr {
   width: 102%;
   height: 102%;
 }
-
 .fixed-first-column tr .vtl-checkbox-td:first-child::before {
   content: "";
   position: absolute;
@@ -1398,169 +1906,64 @@ tr {
 .flex {
   display: flex;
 }
-
 .animation {
   transform: rotate(0deg);
   transition: transform 0.3s;
 }
-
 .cursor-pointer {
   cursor: pointer;
 }
-
 .rotated-90 {
   transform: rotate(-90deg);
 }
-
 .hidden {
   display: none;
 }
-
 .ml-2 {
   margin-left: 0.5rem;
 }
-
 .vtl-tbody-td.hover {
   background-color: #ececec;
 }
-
-
-.spinner-border {
-  display: inline-block;
-  border: 0.25em solid currentcolor;
-  border-right-color: transparent;
-  color: #ffffffbf;
-  width: 4rem;
-  height: 4rem;
-  vertical-align: -0.125em;
-  border-radius: 50%;
-  animation: .75s linear infinite spinner-border;
-  -webkit-animation: .75s linear infinite spinner-border;
+.form-check {
+  padding-left: 0px;
+  margin-bottom: 0px;
 }
 
-@keyframes spinner-border {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
+.form-check .form-check-input {
+  margin-left: 0em;
 }
+.activated {
+  font-weight: 700;
+}
+.filter-icon {
+  font-size: 15px;
+}
+.filter-root {
+  transform: translate(0px, 10px);
+  position: fixed;
+  z-index: 10;
 
-@-webkit-keyframes spinner-border {
-  from {
-    -webkit-transform: rotate(0deg);
+  .search-btn {
+    position: absolute;
+    right: 10px;
   }
-
-  to {
-    -webkit-transform: rotate(360deg);
+  .search-btn:hover,
+  .search-btn:active,
+  .search-btn:focus-visible {
+    color: #212529;
   }
 }
-
-/* skeleton loading  start from here  */
-.flex-item {
-  display: flex;
-  gap: 5px;
+.w-100 {
+  width: 100% !important;
 }
-
-.skeleton-container {
-  border: 1px solid #f3f4f6;
-  /* border-radius: 10px; */
-  /* overflow: hidden; */
-  width: 100%;
+.scroll-btn {
+  padding: 0.3rem 0.45rem;
 }
-
-/* Skeleton sections */
-.skeleton-section {
-  display: grid;
-  /* overflow-x: auto; */
-  overflow: hidden;
+.dataTables_paginate {
+  margin-right: 0.5rem;
 }
-
-.skeleton-header {
-  grid-template-columns: repeat(auto-fit, minmax(3rem, 1fr));
-  background-color: rgb(243, 246, 248);
-  padding-top: 4px;
-  padding-bottom: 4px;
+.grip-handle .grip-resizable {
+  width: 2px;
 }
-
-.skeleton-body {
-  grid-template-columns: repeat(auto-fit, minmax(3rem, 1fr));
-}
-
-.skeleton-footer {
-  margin-top: 10px;
-  margin-bottom: 5px;
-  padding-left: 8px;
-  padding-right: 8px;
-  display: flex;
-  justify-content: space-between;
-}
-
-.skeleton-footer .item {
-  background-color: rgb(229 231 235);
-  border-radius: 5px;
-  height: 30px;
-  min-width: 30px;
-  animation: skeleton-pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-/* Skeleton items */
-.skeleton-item {
-  height: 2.5rem;
-  overflow: hidden;
-  padding-top: 8px;
-  padding-bottom: 8px;
-  padding-left: 8px;
-  padding-right: 8px;
-  /* background-color: white; */
-  border-bottom: 1px solid rgb(243 244 246);
-  animation: skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-.skeleton-body:last-child .skeleton-item {
-  border-bottom: 0;
-}
-
-.skeleton-item .item {
-  background-color: rgb(229 231 235);
-  border-radius: 5px;
-  height: 100%;
-}
-
-/* Skeleton animation */
-@keyframes skeleton-pulse {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.5;
-  }
-}
-
-/* Responsive breakpoints */
-@media (max-width: 1024px) {
-  .skeleton-section {
-    /* grid-template-columns: repeat(5, 1fr); */
-    grid-template-columns: repeat(8, minmax(12rem, 1fr));
-  }
-}
-
-@media (max-width: 640px) {
-  .skeleton-section {
-    grid-template-columns: repeat(8, minmax(12rem, 1fr));
-  }
-}
-
-@media (max-width: 480px) {
-  .skeleton-section {
-    grid-template-columns: repeat(8, minmax(12rem, 1fr));
-  }
-}
-
-/* skeleton loading ending here  */
 </style>
