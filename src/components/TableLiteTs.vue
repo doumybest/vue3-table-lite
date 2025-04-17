@@ -3,7 +3,6 @@ import ColumnResizer from "column-resizer/src/ColumnResizer.js";
 import * as DOMPurify from "dompurify";
 import { TableScroll } from "../tableScroll";
 import { isEqual } from "lodash-es";
-import { onUnmounted, nextTick } from "vue";
 import {
   defineComponent,
   ref,
@@ -12,7 +11,10 @@ import {
   watch,
   onBeforeUpdate,
   onMounted,
-  Ref,
+  Ref, 
+  onUnmounted, 
+  nextTick, 
+  onBeforeUnmount
 } from "vue";
 
 interface pageOption {
@@ -735,13 +737,13 @@ export default defineComponent({
     // 監聽組件內顯示筆數切換 (Monitor display number switch from component)
     const stopWatch5 = watch(() => setting.pageSize, changePageSize);
     // 監聽來自Prop的顯示筆數切換 (Monitor display number switch from prop)
-    watch(
+    const stopWatch6 = watch(
       () => props.pageSize,
       (newPageSize) => {
         setting.pageSize = newPageSize;
       }
     );
-    const stopWatch6 = watch(
+    const stopWatch7 = watch(
       () => props.selectedItems,
       (val: any) => {
         if (Array.isArray(val)) checkModel.value = val;
@@ -792,7 +794,7 @@ export default defineComponent({
     };
 
     // 監聽資料變更 (Monitoring data changes)
-    const stopWatch7 = watch(
+    const stopWatch8 = watch(
       () => props.rows,
       (arr: any[]) => {
         if (props.isReSearch || props.isStaticMode) {
@@ -991,7 +993,9 @@ export default defineComponent({
     /**
      * 組件掛載後事件 (Mounted Event)
      */
+    const isMounted = ref(false);
     onMounted(() => {
+      isMounted.value = true;
       nextTick(() => {
         if (props.rows.length > 0) {
           callIsFinished();
@@ -1037,7 +1041,7 @@ export default defineComponent({
       });
     });
 
-    onUnmounted(() => {
+    onBeforeUnmount(() => {
       stopWatch1();
       stopWatch2();
       stopWatch3();
@@ -1045,13 +1049,19 @@ export default defineComponent({
       stopWatch5();
       stopWatch6();
       stopWatch7();
+      stopWatch8();
       heightWatch();
       window.removeEventListener("click", closeFilterLayer);
       window.removeEventListener("resize", resizeEvent);
       scrollHandler.value?.stopScroll();
       scrollHandler.value = null;
+      rowCheckbox.value = [];
+      toggleButtonRefs.value = [];
+      groupingRowsRefs.value = [];
 
       resizer.value?.destroy();
+
+      isMounted.value = false;
     });
 
     return {
@@ -1098,7 +1108,7 @@ export default defineComponent({
 
 <template>
   <!-- eslint-disable @typescript-eslint/no-explicit-any -->
-  <div class="vtl vtl-card" :id="`${id}-root`" ref="rootTable">
+  <div class="vtl vtl-card" :id="`${id}-root`" ref="rootTable" v-if="isMounted">
     <div class="vtl-card-title" v-if="title" :id="scrollId">{{ title }}</div>
     <div class="vtl-card-body">
       <div class="vtl-row">
