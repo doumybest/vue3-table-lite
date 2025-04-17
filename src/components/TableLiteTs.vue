@@ -1066,10 +1066,12 @@ export default defineComponent({
       scrollHandler.value?.stopScroll();
       scrollHandler.value = null;
       rowCheckbox.value.length = 0;
-      toggleButtonRefs.value.length = 0;
-      groupingRowsRefs.value.length = 0;
+      toggleButtonRefs.value = {};
+      groupingRowsRefs.value = {};
 
       resizer.value?.destroy();
+
+      rootTable.value?.remove();
     });
 
     return {
