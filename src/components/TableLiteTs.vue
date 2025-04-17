@@ -1003,9 +1003,7 @@ export default defineComponent({
     /**
      * 組件掛載後事件 (Mounted Event)
      */
-    const isMounted = ref(false);
     onMounted(() => {
-      isMounted.value = true;
       nextTick(() => {
         if (props.rows.length > 0) {
           callIsFinished();
@@ -1072,8 +1070,6 @@ export default defineComponent({
       groupingRowsRefs.value.length = 0;
 
       resizer.value?.destroy();
-
-      isMounted.value = false;
     });
 
     return {
@@ -1122,7 +1118,7 @@ export default defineComponent({
   <!-- eslint-disable @typescript-eslint/no-explicit-any -->
   <div class="vtl vtl-card" :id="`${id}-root`" ref="rootTable">
     <div class="vtl-card-title" v-if="title" :id="scrollId">{{ title }}</div>
-    <div class="vtl-card-body" v-if="isMounted">
+    <div class="vtl-card-body">
       <div class="vtl-row">
         <div
           class="vtl-table-responsive col-sm-12"
