@@ -14,7 +14,6 @@ import {
   Ref,
   onUnmounted,
   nextTick,
-  onBeforeUnmount,
 } from "vue";
 
 interface pageOption {
@@ -1051,7 +1050,7 @@ export default defineComponent({
       });
     });
 
-    onBeforeUnmount(() => {
+    onUnmounted(() => {
       stopWatch1();
       stopWatch2();
       stopWatch3();
@@ -1070,7 +1069,6 @@ export default defineComponent({
       groupingRowsRefs.value = {};
 
       resizer.value?.destroy();
-
       rootTable.value?.remove();
     });
 
